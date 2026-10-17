@@ -681,7 +681,6 @@ function runStressTests(sg,hrs,n,ob,baseTots,baseRes,baseMed,baseP5,baseP95,base
 
   // ── TORNADO CHART ──
   dc('tornado');
-  const baseP95=pctl(baseTots,95);
   const tData=scenarios.map(s=>({name:s.name,delta:s.p95-baseP95})).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
   charts.tornado=new Chart(document.getElementById('tornadoChart'),{type:'bar',data:{
     labels:tData.map(d=>d.name),
