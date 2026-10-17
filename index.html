@@ -233,21 +233,63 @@ input.name-input:focus { outline: none; background: var(--bg); border-radius: 3p
     </div>
     <div id="resultsContent" class="hidden">
       <div class="kpi-grid" id="kpiGrid"></div>
-      <div class="grid-2">
-        <div class="card"><h3>Risk Table (Value at Risk)</h3><table class="risk-table" id="riskTable"><thead><tr><th>Confidence</th><th>Max Pkg Cost</th><th>vs Open Bar</th><th>Drinks</th><th>Per Capita</th></tr></thead><tbody></tbody></table></div>
-        <div class="card"><h3>Cumulative Probability (ECDF)</h3><div class="chart-box"><canvas id="ecdfChart"></canvas></div></div>
+
+      <!-- Row 1: Distribution with confidence bands + ECDF with savings shading -->
+      <div class="card" style="margin-bottom:20px">
+        <h3>Cost Distribution with Confidence Bands</h3>
+        <div style="position:relative;height:340px"><canvas id="histChart"></canvas></div>
+        <div id="histLegend" style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--muted)"></div>
       </div>
+
       <div class="grid-2">
-        <div class="card"><h3>Cost Distribution</h3><div class="chart-box"><canvas id="histChart"></canvas></div></div>
-        <div class="card"><h3>Scenario Comparison</h3><div class="chart-box"><canvas id="breakdownChart"></canvas></div></div>
+        <div class="card">
+          <h3>Cumulative Probability &mdash; Where Does Your Money Go?</h3>
+          <div class="chart-box"><canvas id="ecdfChart"></canvas></div>
+          <div id="ecdfAnnotation" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></div>
+        </div>
+        <div class="card">
+          <h3>Outcome Scenarios (200 random simulations)</h3>
+          <div class="chart-box"><canvas id="swarmChart"></canvas></div>
+        </div>
       </div>
+
+      <!-- Row 2: Risk table + Scenario breakdown -->
       <div class="grid-2">
-        <div class="card"><h3>Drink Volume by Type (Median)</h3><div class="chart-box"><canvas id="drinkTypeChart"></canvas></div></div>
-        <div class="card"><h3>Overage Cost Decomposition</h3><div class="chart-box"><canvas id="overageChart"></canvas></div></div>
+        <div class="card">
+          <h3>Risk Table (Value at Risk)</h3>
+          <table class="risk-table" id="riskTable">
+            <thead><tr><th>Confidence</th><th>Max Pkg Cost</th><th>vs Open Bar</th><th>Drinks</th><th>Per Capita</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Cost Components Across Scenarios</h3>
+          <div class="chart-box"><canvas id="breakdownChart"></canvas></div>
+        </div>
       </div>
+
+      <!-- Row 3: Drink economics -->
       <div class="grid-2">
-        <div class="card"><h3>Sensitivity: Guest Count (80&ndash;150)</h3><div class="chart-box"><canvas id="sensitivityChart"></canvas></div></div>
-        <div class="card"><h3>Breakeven Analysis</h3><div id="breakevenText" style="font-size:13px;line-height:1.9"></div></div>
+        <div class="card">
+          <h3>Drink Volume by Type (Median)</h3>
+          <div class="chart-box"><canvas id="drinkTypeChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>Overage Cost Decomposition</h3>
+          <div class="chart-box"><canvas id="overageChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 4: Sensitivity fan chart + Breakeven -->
+      <div class="grid-2">
+        <div class="card">
+          <h3>Sensitivity: Guest Count &mdash; Confidence Fan</h3>
+          <div class="chart-box"><canvas id="sensitivityChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>Breakeven Analysis</h3>
+          <div id="breakevenText" style="font-size:13px;line-height:1.9"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -428,54 +470,98 @@ function runSimulation() {
     return `<tr><td>${p}%</td><td>${fmt(c)}</td><td style="color:${diff<0?'var(--green)':'var(--red)'}">${diff<0?'':'+'}${fmt(diff)}</td><td>${Math.round(d)}</td><td>${(d/n).toFixed(1)}</td></tr>`;
   }).join('');
 
-  // ECDF
-  dc('ecdf');
-  const ecdfN=150,ecdfD=[];
-  for(let i=0;i<ecdfN;i++){const v=tots[Math.floor(i/ecdfN*tots.length)];ecdfD.push({x:v,y:(i+1)/ecdfN*100});}
-  charts.ecdf=new Chart(document.getElementById('ecdfChart'),{type:'scatter',data:{datasets:[
-    {label:'Package CDF',data:ecdfD,showLine:true,pointRadius:0,borderColor:'rgba(59,130,246,0.8)',borderWidth:2,fill:false},
-    {label:'Open Bar',data:[{x:ob,y:0},{x:ob,y:100}],showLine:true,pointRadius:0,borderColor:'var(--red)',borderWidth:2,borderDash:[6,4],fill:false}
-  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Total Cost'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString()}},y:{title:{display:true,text:'Cumulative Probability (%)'},min:0,max:100}},plugins:{legend:{position:'bottom'}}}});
-
-  // Histogram
+  // ── HISTOGRAM with confidence bands ──
   dc('hist');
-  const nBins=50,mn=tots[0],mx=tots[tots.length-1],bw=(mx-mn)/nBins||1;
+  const nBins=60,mn=tots[0],mx=tots[tots.length-1],bw=(mx-mn)/nBins||1;
   const bc=new Array(nBins).fill(0),bl=[];
-  for(let i=0;i<nBins;i++)bl.push(Math.round(mn+i*bw));
+  for(let i=0;i<nBins;i++)bl.push(mn+i*bw);
   for(const t of tots)bc[Math.min(Math.floor((t-mn)/bw),nBins-1)]++;
-  charts.hist=new Chart(document.getElementById('histChart'),{type:'bar',data:{labels:bl.map(v=>fmt(v)),datasets:[{data:bc,backgroundColor:'rgba(59,130,246,0.4)',borderColor:'rgba(59,130,246,0.7)',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:8,maxRotation:45}},y:{title:{display:true,text:'Frequency'}}}},plugins:[{afterDraw(ch){const xs=ch.scales.x,ys=ch.scales.y,ctx=ch.ctx,bi=Math.min(Math.floor((ob-mn)/bw),nBins-1);if(bi>=0&&bi<nBins){const x=xs.getPixelForValue(bi);ctx.save();ctx.strokeStyle='var(--red)';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(x,ys.top);ctx.lineTo(x,ys.bottom);ctx.stroke();ctx.fillStyle='var(--red)';ctx.font='bold 11px sans-serif';ctx.fillText('Open Bar '+fmt(ob),x+4,ys.top+12);ctx.restore();}}}]});
+  // Color each bin by confidence region
+  const binColors=bc.map((_,i)=>{
+    const binCenter=mn+(i+0.5)*bw;
+    if(binCenter>=p5&&binCenter<=p95){return binCenter>=pctl(tots,25)&&binCenter<=pctl(tots,75)?'rgba(59,130,246,0.6)':'rgba(59,130,246,0.3)';}
+    return 'rgba(59,130,246,0.12)';
+  });
+  charts.hist=new Chart(document.getElementById('histChart'),{type:'bar',data:{labels:bl.map(v=>fmt(v)),datasets:[{data:bc,backgroundColor:binColors,borderColor:'rgba(59,130,246,0.5)',borderWidth:0.5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>fmt(bl[ctx[0].dataIndex]),label:ctx=>ctx.raw+' simulations'}}},scales:{x:{ticks:{maxTicksLimit:8,maxRotation:45,callback:function(v,i){return i%Math.ceil(nBins/8)===0?fmt(bl[i]):''}},grid:{display:false}},y:{title:{display:true,text:'Frequency'},grid:{color:'rgba(0,0,0,0.04)'}}}},
+    plugins:[{afterDraw(ch){
+      const xs=ch.scales.x,ys=ch.scales.y,ctx=ch.ctx;
+      // Open bar line
+      const obBin=Math.min(Math.floor((ob-mn)/bw),nBins-1);
+      if(obBin>=0&&obBin<nBins){const x=xs.getPixelForValue(obBin);ctx.save();ctx.strokeStyle='#e74c3c';ctx.lineWidth=2.5;ctx.setLineDash([8,5]);ctx.beginPath();ctx.moveTo(x,ys.top);ctx.lineTo(x,ys.bottom);ctx.stroke();ctx.fillStyle='#e74c3c';ctx.font='bold 12px -apple-system,sans-serif';ctx.fillText('Open Bar '+fmt(ob),x+6,ys.top+14);ctx.restore();}
+      // Median line
+      const medBin=Math.min(Math.floor((med-mn)/bw),nBins-1);
+      if(medBin>=0){const x=xs.getPixelForValue(medBin);ctx.save();ctx.strokeStyle='rgba(59,130,246,0.9)';ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(x,ys.top);ctx.lineTo(x,ys.bottom);ctx.stroke();ctx.fillStyle='rgba(59,130,246,0.9)';ctx.font='bold 11px -apple-system,sans-serif';ctx.fillText('Median '+fmt(med),x+5,ys.top+28);ctx.restore();}
+      // P5/P95 labels
+      [['P5',p5],['P95',p95]].forEach(([lbl,v])=>{const bi=Math.min(Math.floor((v-mn)/bw),nBins-1);if(bi>=0){const x=xs.getPixelForValue(bi);ctx.save();ctx.strokeStyle='rgba(59,130,246,0.35)';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(x,ys.top+40);ctx.lineTo(x,ys.bottom);ctx.stroke();ctx.fillStyle='rgba(59,130,246,0.5)';ctx.font='10px -apple-system,sans-serif';ctx.fillText(lbl+' '+fmt(v),x+3,ys.top+42);ctx.restore();}});
+    }}]
+  });
+  document.getElementById('histLegend').innerHTML=`
+    <span><span style="display:inline-block;width:12px;height:12px;background:rgba(59,130,246,0.6);border-radius:2px;vertical-align:middle;margin-right:4px"></span>P25&ndash;P75 (50% of outcomes)</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:rgba(59,130,246,0.3);border-radius:2px;vertical-align:middle;margin-right:4px"></span>P5&ndash;P95 (90% of outcomes)</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:rgba(59,130,246,0.12);border-radius:2px;vertical-align:middle;margin-right:4px"></span>Tail outcomes</span>
+    <span style="color:#e74c3c">&#9472;&#9472; Open Bar</span>`;
 
-  // Breakdown
+  // ── ECDF with savings zone ──
+  dc('ecdf');
+  const ecdfN=200,ecdfD=[],ecdfBelow=[],ecdfAbove=[];
+  for(let i=0;i<ecdfN;i++){
+    const v=tots[Math.floor(i/ecdfN*tots.length)],y=(i+1)/ecdfN*100;
+    ecdfD.push({x:v,y});
+    if(v<=ob){ecdfBelow.push({x:v,y});ecdfAbove.push({x:v,y:null});}
+    else{ecdfAbove.push({x:v,y});ecdfBelow.push({x:v,y:null});}
+  }
+  charts.ecdf=new Chart(document.getElementById('ecdfChart'),{type:'scatter',data:{datasets:[
+    {label:'Cheaper than open bar',data:ecdfBelow.filter(d=>d.y!==null),showLine:true,pointRadius:0,borderColor:'rgba(74,124,79,0.8)',borderWidth:2.5,backgroundColor:'rgba(74,124,79,0.08)',fill:'origin'},
+    {label:'More expensive',data:ecdfAbove.filter(d=>d.y!==null),showLine:true,pointRadius:0,borderColor:'rgba(181,71,58,0.8)',borderWidth:2.5,backgroundColor:'rgba(181,71,58,0.08)',fill:'origin'},
+    {label:'Open Bar '+fmt(ob),data:[{x:ob,y:0},{x:ob,y:100}],showLine:true,pointRadius:0,borderColor:'#e74c3c',borderWidth:2,borderDash:[8,5],fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Total Package Cost'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString()}},y:{title:{display:true,text:'Cumulative Probability (%)'},min:0,max:100}},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y.toFixed(0)}% chance cost <= ${fmt(ctx.parsed.x)}`}}}}});
+  document.getElementById('ecdfAnnotation').innerHTML=`<strong style="color:var(--green)">${pctCh}%</strong> of outcomes fall below the open bar price &mdash; <strong style="color:var(--red)">${100-pctCh}%</strong> exceed it`;
+
+  // ── SWARM: 200 random simulations as dots ──
+  dc('swarm');
+  const sampleN=200,samplePts=[];
+  for(let i=0;i<sampleN;i++){const idx=Math.floor(Math.random()*res.length);const r=res[idx];samplePts.push({x:r.total,y:0.3+Math.random()*0.4,r});}
+  charts.swarm=new Chart(document.getElementById('swarmChart'),{type:'scatter',data:{datasets:[
+    {label:'Each dot = 1 simulation',data:samplePts.map(p=>({x:p.x,y:p.y})),pointRadius:3.5,pointBackgroundColor:samplePts.map(p=>p.x<ob?'rgba(74,124,79,0.5)':'rgba(181,71,58,0.5)'),pointBorderColor:samplePts.map(p=>p.x<ob?'rgba(74,124,79,0.8)':'rgba(181,71,58,0.8)'),pointBorderWidth:0.5},
+    {label:'Open Bar',data:[{x:ob,y:0},{x:ob,y:1}],showLine:true,pointRadius:0,borderColor:'#e74c3c',borderWidth:2,borderDash:[8,5],fill:false},
+    {label:'Median',data:[{x:med,y:0},{x:med,y:1}],showLine:true,pointRadius:0,borderColor:'rgba(59,130,246,0.7)',borderWidth:2,fill:false},
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Total Cost'},ticks:{callback:v=>fmt(v)}},y:{display:false,min:0,max:1}},plugins:{legend:{position:'bottom',labels:{filter:item=>item.datasetIndex>0||item.text.includes('dot')}},tooltip:{callbacks:{label:ctx=>{if(ctx.datasetIndex===0)return fmt(ctx.parsed.x);return ctx.dataset.label+': '+fmt(ctx.parsed.x)}}}}}});
+
+  // ── BREAKDOWN ──
   dc('breakdown');
-  charts.breakdown=new Chart(document.getElementById('breakdownChart'),{type:'bar',data:{labels:['Open Bar','Pkg P5','Pkg Med','Pkg P95','Pkg P99'],datasets:[
-    {label:'Base',data:[0,mr.base,mr.base,mr.base,mr.base],backgroundColor:'#93c5a8'},
-    {label:'Add-ons',data:[0,mr.addon,mr.addon,mr.addon,mr.addon],backgroundColor:'#7aaed4'},
-    {label:'Overage',data:[0,Math.max(0,p5-mr.base-mr.addon),mr.oCost,Math.max(0,p95-mr.base-mr.addon),Math.max(0,p99-mr.base-mr.addon)],backgroundColor:'#e8a87c'},
-    {label:'Open Bar',data:[ob,0,0,0,0],backgroundColor:'#d4a0a0'}
+  const p10=pctl(tots,10),p25=pctl(tots,25),p75=pctl(tots,75),p90=pctl(tots,90);
+  charts.breakdown=new Chart(document.getElementById('breakdownChart'),{type:'bar',data:{labels:['Open Bar','P5','P25','Median','P75','P95','P99'],datasets:[
+    {label:'Base',data:[0,mr.base,mr.base,mr.base,mr.base,mr.base,mr.base],backgroundColor:'#93c5a8'},
+    {label:'Add-ons',data:[0,mr.addon,mr.addon,mr.addon,mr.addon,mr.addon,mr.addon],backgroundColor:'#7aaed4'},
+    {label:'Overage',data:[0,Math.max(0,p5-mr.base-mr.addon),Math.max(0,p25-mr.base-mr.addon),mr.oCost,Math.max(0,p75-mr.base-mr.addon),Math.max(0,p95-mr.base-mr.addon),Math.max(0,p99-mr.base-mr.addon)],backgroundColor:'#e8a87c'},
+    {label:'Open Bar',data:[ob,0,0,0,0,0,0],backgroundColor:'#d4a0a0'}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{},y:{stacked:true,ticks:{callback:v=>'$'+v.toLocaleString()}}}}});
 
-  // Drink type
+  // ── DRINK TYPE ──
   dc('drinkType');
-  charts.drinkType=new Chart(document.getElementById('drinkTypeChart'),{type:'doughnut',data:{labels:[`Beer (${mr.b})`,`Wine (${mr.w})`,`Cocktail (${mr.c})`],datasets:[{data:[mr.b,mr.w,mr.c],backgroundColor:['#daa520','#8b2252','#2f6b7a']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:`${mr.tot} total | ${mr.over} overage | pool: ${mr.pool}`}}}});
+  charts.drinkType=new Chart(document.getElementById('drinkTypeChart'),{type:'doughnut',data:{labels:[`Beer (${mr.b})`,`Wine (${mr.w})`,`Cocktail (${mr.c})`],datasets:[{data:[mr.b,mr.w,mr.c],backgroundColor:['#daa520','#8b2252','#2f6b7a'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:`${mr.tot} total | ${mr.over} overage | pool: ${mr.pool}`}}}});
 
-  // Overage
+  // ── OVERAGE ──
   dc('overage');
   charts.overage=new Chart(document.getElementById('overageChart'),{type:'bar',data:{labels:['Beer','Wine','Cocktail'],datasets:[
     {label:'Drinks',data:[mr.oB,mr.oW,mr.oC],backgroundColor:['rgba(218,165,32,0.4)','rgba(139,34,82,0.4)','rgba(47,107,122,0.4)'],yAxisID:'y'},
     {label:'Cost',data:[mr.oB*val('priceBeer'),mr.oW*val('priceWine'),mr.oC*val('priceCocktail')],backgroundColor:['rgba(218,165,32,0.9)','rgba(139,34,82,0.9)','rgba(47,107,122,0.9)'],yAxisID:'y1'}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:`${mr.over} overage drinks = ${fmt(mr.oCost)}`}},scales:{y:{position:'left',title:{display:true,text:'Drinks'}},y1:{position:'right',title:{display:true,text:'$'},ticks:{callback:v=>'$'+v},grid:{drawOnChartArea:false}}}}});
 
-  // Sensitivity
+  // ── SENSITIVITY FAN CHART ──
   dc('sensitivity');
   const gcs=[];for(let g=80;g<=150;g+=5)gcs.push(g);
-  const oLine=gcs.map(g=>g*val('openBarPP')),mLine=[],p25L=[],p75L=[];
-  for(const gc of gcs){const mr2=[];for(let i=0;i<1000;i++){const s=[];for(let j=0;j<gc;j++)s.push(sg[Math.floor(Math.random()*sg.length)]);mr2.push(pkgCost(gc,simOnce(s,hrs)).total);}mr2.sort((a,b)=>a-b);p25L.push(pctl(mr2,25));mLine.push(pctl(mr2,50));p75L.push(pctl(mr2,75));}
+  const oLine=gcs.map(g=>g*val('openBarPP')),mLine=[],sp5=[],sp25=[],sp75=[],sp95=[];
+  for(const gc of gcs){const mr2=[];for(let i=0;i<1000;i++){const s=[];for(let j=0;j<gc;j++)s.push(sg[Math.floor(Math.random()*sg.length)]);mr2.push(pkgCost(gc,simOnce(s,hrs)).total);}mr2.sort((a,b)=>a-b);sp5.push(pctl(mr2,5));sp25.push(pctl(mr2,25));mLine.push(pctl(mr2,50));sp75.push(pctl(mr2,75));sp95.push(pctl(mr2,95));}
   charts.sensitivity=new Chart(document.getElementById('sensitivityChart'),{type:'line',data:{labels:gcs,datasets:[
-    {label:'Open Bar',data:oLine,borderColor:'var(--red)',borderWidth:2,fill:false,pointRadius:0},
-    {label:'Pkg P25',data:p25L,borderColor:'rgba(59,130,246,0.25)',borderWidth:1,borderDash:[4,4],fill:false,pointRadius:0},
-    {label:'Pkg Median',data:mLine,borderColor:'rgba(59,130,246,0.8)',borderWidth:2,fill:false,pointRadius:0},
-    {label:'Pkg P75',data:p75L,borderColor:'rgba(59,130,246,0.25)',borderWidth:1,borderDash:[4,4],fill:false,pointRadius:0},
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{title:{display:true,text:'Guests'}},y:{ticks:{callback:v=>'$'+v.toLocaleString()}}}}});
+    {label:'P5-P95 range',data:sp95,borderColor:'transparent',backgroundColor:'rgba(59,130,246,0.08)',fill:'+1',pointRadius:0},
+    {label:'P5',data:sp5,borderColor:'transparent',fill:false,pointRadius:0},
+    {label:'P25-P75 range',data:sp75,borderColor:'transparent',backgroundColor:'rgba(59,130,246,0.15)',fill:'+1',pointRadius:0},
+    {label:'P25',data:sp25,borderColor:'transparent',fill:false,pointRadius:0},
+    {label:'Pkg Median',data:mLine,borderColor:'rgba(59,130,246,0.9)',borderWidth:2.5,fill:false,pointRadius:0},
+    {label:'Open Bar',data:oLine,borderColor:'#e74c3c',borderWidth:2.5,borderDash:[8,5],fill:false,pointRadius:0},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{filter:item=>['Pkg Median','Open Bar','P25-P75 range','P5-P95 range'].includes(item.text)}}},scales:{x:{title:{display:true,text:'Guest Count'}},y:{ticks:{callback:v=>'$'+v.toLocaleString()}}}}});
 
   // Breakeven
   const af=val('addOnCocktailQty')*val('addOnCocktailPrice')+val('addOnChampQty')*val('addOnChampPrice');
