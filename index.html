@@ -3,947 +3,469 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wedding Drink Cost Simulator</title>
+<title>Drink Cost Simulator</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f3f0; color: #2c2c2c; line-height: 1.5; }
-  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-  h1 { font-size: 28px; font-weight: 600; margin-bottom: 4px; }
-  .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-  .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #444; text-transform: uppercase; letter-spacing: 0.5px; font-size: 13px; }
-  .field { margin-bottom: 12px; }
-  .field label { display: block; font-size: 13px; color: #555; margin-bottom: 3px; }
-  .field input, .field select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff; }
-  .field input:focus, .field select:focus { outline: none; border-color: #7c6f64; }
-  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  .field-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
-  button.primary { background: #5b7a5e; color: #fff; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 8px; }
-  button.primary:hover { background: #4a6a4d; }
-  button.secondary { background: #e8e4df; color: #444; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; }
-  button.secondary:hover { background: #ddd8d2; }
-  button.small { background: #e8e4df; color: #444; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
-  button.small:hover { background: #ddd8d2; }
-  .full-width { grid-column: 1 / -1; }
-  .results-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-  .stat-card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }
-  .stat-card .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-  .stat-card .value { font-size: 28px; font-weight: 700; margin: 4px 0; }
-  .stat-card .detail { font-size: 12px; color: #999; }
-  .stat-card.green .value { color: #4a7c4f; }
-  .stat-card.red .value { color: #b5473a; }
-  .stat-card.blue .value { color: #3a6fb5; }
-  .chart-container { position: relative; height: 350px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e8e4df; font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase; }
-  td { padding: 5px 8px; border-bottom: 1px solid #f0ede9; }
-  .guest-list-area { border: 2px dashed #d5d0c9; border-radius: 8px; padding: 24px; text-align: center; color: #999; cursor: pointer; transition: border-color 0.2s; }
-  .guest-list-area:hover { border-color: #aaa; }
-  .guest-list-area.has-data { border-style: solid; border-color: #5b7a5e; background: #f6faf6; color: #5b7a5e; }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-  .tag.non { background: #f0ede9; color: #888; }
-  .tag.light { background: #e8f0e8; color: #5b7a5e; }
-  .tag.moderate { background: #e8ecf0; color: #3a6fb5; }
-  .tag.heavy { background: #f0e8e8; color: #b5473a; }
-  .tag.whale { background: #f0e8f0; color: #8a3ab5; }
-  .help { font-size: 11px; color: #aaa; margin-top: 3px; }
-  .hidden { display: none; }
-  .percentile-table td:first-child { font-weight: 600; }
-  select { padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; background: #fff; }
-  .combo-summary { background: #f9f7f4; border-radius: 8px; padding: 16px; margin-top: 12px; font-size: 13px; line-height: 1.7; }
-  .combo-summary strong { color: #444; }
-  .dist-note { background: #f0f4f8; border-left: 3px solid #3a6fb5; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-bottom: 16px; font-size: 12px; color: #555; line-height: 1.5; }
-  .wave-header { background: #f9f7f4; padding: 8px 10px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
-  .wave-header.w1 { border-left: 3px solid #5b7a5e; }
-  .wave-header.w2 { border-left: 3px solid #3a6fb5; }
-  .wave-header.w3 { border-left: 3px solid #b8860b; }
-  .guest-table-container { max-height: 600px; overflow-y: auto; border: 1px solid #e8e4df; border-radius: 8px; }
-  .guest-table-container table { margin: 0; }
-  .guest-table-container th { position: sticky; top: 0; background: #fff; z-index: 1; }
-  .rsvp-yes { color: #4a7c4f; }
-  .rsvp-no { color: #b5473a; }
-  .rsvp-pending { color: #999; }
-  .guest-stats { display: flex; gap: 16px; margin: 12px 0; font-size: 13px; flex-wrap: wrap; }
-  .guest-stat { background: #f9f7f4; padding: 6px 12px; border-radius: 6px; }
-  .guest-stat strong { color: #444; }
-  .bulk-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-  .bulk-actions label { font-size: 12px; color: #666; }
-  input.guest-name-input { border: none; background: transparent; padding: 2px 4px; font-size: 13px; width: 100%; }
-  input.guest-name-input:focus { outline: none; background: #f9f7f4; border-radius: 3px; }
+:root {
+  --bg: #f5f3f0; --card: #fff; --border: #e8e4df; --text: #2c2c2c; --muted: #888;
+  --green: #4a7c4f; --red: #b5473a; --blue: #3a6fb5; --gold: #b8860b; --purple: #8a3ab5;
+  --accent: #5b7a5e; --accent-hover: #4a6a4d;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; font-size: 14px; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+.header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 24px; }
+.header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.header .meta { font-size: 12px; color: var(--muted); }
+
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+.tab { padding: 10px 24px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; user-select: none; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.tab .badge { background: var(--accent); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; font-weight: 700; }
+
+.card { background: var(--card); border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 20px; }
+.card h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 14px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: 12px; color: #666; margin-bottom: 2px; font-weight: 500; }
+.field input, .field select { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--card); }
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+
+.btn { border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg); color: var(--text); }
+.btn-danger { background: transparent; color: var(--red); border: 1px solid var(--border); }
+.btn-danger:hover { background: #fdf2f0; }
+.btn-lg { padding: 14px 48px; font-size: 15px; border-radius: 8px; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 2px solid var(--border); }
+td { padding: 5px 8px; border-bottom: 1px solid #f5f3f0; }
+.table-container { max-height: 500px; overflow-y: auto; }
+.table-container th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+
+.tag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+.tag-non { background: #f0ede9; color: #999; } .tag-light { background: #e8f0e8; color: var(--green); }
+.tag-moderate { background: #e8ecf0; color: var(--blue); } .tag-heavy { background: #f0e8e8; color: var(--red); }
+.tag-whale { background: #f0e8f0; color: var(--purple); }
+.tag-beer { background: #fdf3e0; color: var(--gold); } .tag-wine { background: #f3e0f0; color: #8b2252; }
+.tag-cocktail { background: #e0f0f3; color: #2f6b7a; } .tag-mixed { background: #eee; color: #666; }
+
+.stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+.stat-pill { background: var(--bg); padding: 4px 12px; border-radius: 6px; font-size: 12px; }
+.stat-pill strong { font-weight: 700; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.kpi { background: var(--card); border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.kpi .kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.kpi .kpi-value { font-size: 26px; font-weight: 800; margin: 2px 0; letter-spacing: -1px; }
+.kpi .kpi-sub { font-size: 11px; color: var(--muted); }
+.kpi-green .kpi-value { color: var(--green); } .kpi-red .kpi-value { color: var(--red); }
+.kpi-blue .kpi-value { color: var(--blue); } .kpi-neutral .kpi-value { color: var(--text); }
+
+.chart-box { position: relative; height: 300px; }
+.wave-hdr { padding: 6px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #666; background: var(--bg); }
+.wave-hdr.w1 { border-left: 3px solid var(--green); } .wave-hdr.w2 { border-left: 3px solid var(--blue); } .wave-hdr.w3 { border-left: 3px solid var(--gold); }
+
+select.inline { width: auto; padding: 3px 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); }
+input.name-input { border: none; background: transparent; padding: 2px 4px; font-size: 13px; width: 100%; }
+input.name-input:focus { outline: none; background: var(--bg); border-radius: 3px; }
+.hidden { display: none; }
+.note { background: #f0f4f8; border-left: 3px solid var(--blue); padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 12px; color: #555; line-height: 1.5; margin-bottom: 14px; }
+.risk-table td:first-child { font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+
+@media(max-width:768px) {
+  .grid-2,.kpi-grid { grid-template-columns: 1fr; }
+  .tab { padding: 10px 14px; font-size: 12px; }
+}
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Wedding Drink Cost Simulator</h1>
-  <p class="subtitle">Monte Carlo simulation comparing open bar vs. per-consumption pricing &mdash; 8/28/2026</p>
+  <div class="header">
+    <h1>Drink Cost Simulator</h1>
+    <span class="meta">Monte Carlo &middot; Gamma Distribution</span>
+  </div>
 
-  <!-- Guest List (full width) -->
-  <div class="card" style="margin-bottom:24px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2 style="margin-bottom:0">Guest List</h2>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="secondary" onclick="document.getElementById('csvUpload').click()">Upload CSV</button>
-        <button class="secondary" onclick="addGuest()">+ Add Guest</button>
-        <button class="secondary" onclick="resetToOriginal()" style="color:#b5473a">Reset to Original</button>
-        <input type="file" id="csvUpload" accept=".csv" class="hidden">
-      </div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('guests')">Guests <span class="badge" id="guestCountBadge">0</span></div>
+    <div class="tab" onclick="switchTab('assumptions')">Assumptions</div>
+    <div class="tab" onclick="switchTab('results')">Results</div>
+  </div>
+
+  <!-- TAB 1: GUESTS -->
+  <div id="tab-guests" class="tab-content active">
+    <div class="toolbar">
+      <button class="btn btn-ghost" onclick="document.getElementById('jsonImport').click()">Import JSON</button>
+      <button class="btn btn-ghost" onclick="exportGuests()">Export JSON</button>
+      <button class="btn btn-ghost" onclick="addGuest()">+ Add</button>
+      <button class="btn btn-danger" onclick="clearAllGuests()">Clear All</button>
+      <input type="file" id="jsonImport" accept=".json" class="hidden">
+      <div style="flex:1"></div>
+      <span style="font-size:12px;color:var(--muted)">Simulate:</span>
+      <select class="inline" id="simMode">
+        <option value="rsvp_yes">RSVP Yes only</option>
+        <option value="rsvp_yes_pending" selected>Yes + Pending</option>
+        <option value="all">All guests</option>
+      </select>
     </div>
 
-    <div class="guest-stats" id="guestStats"></div>
+    <div class="stat-row" id="guestStats"></div>
 
-    <div class="bulk-actions">
-      <label>Bulk set selected:</label>
-      <select id="bulkWave" onchange="bulkSet('wave', this.value)"><option value="">Wave...</option><option>Wave 1</option><option>Wave 2</option><option>Wave 3</option></select>
-      <select id="bulkRsvp" onchange="bulkSet('rsvp', this.value)"><option value="">RSVP...</option><option>Yes</option><option>No</option><option>Pending</option></select>
-      <select id="bulkCategory" onchange="bulkSet('category', this.value)"><option value="">Category...</option><option value="non">Non-drinker</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="heavy">Heavy</option><option value="whale">Whale</option></select>
-      <select id="bulkBeverage" onchange="bulkSet('beverage', this.value)"><option value="">Beverage...</option><option value="beer">Beer</option><option value="wine">Wine</option><option value="cocktail">Cocktail</option><option value="mixed">Mixed</option></select>
-      <button class="small" onclick="selectAll()">Select all</button>
-      <button class="small" onclick="selectNone()">Select none</button>
+    <div class="toolbar">
+      <input type="checkbox" id="selectAllCb" onchange="toggleSelectAll(this.checked)">
+      <span style="font-size:12px;color:var(--muted)">Bulk:</span>
+      <select class="inline" onchange="bulkSet('rsvp',this.value);this.value=''"><option value="">RSVP...</option><option>Yes</option><option>No</option><option>Pending</option></select>
+      <select class="inline" onchange="bulkSet('category',this.value);this.value=''"><option value="">Category...</option><option value="non">Non</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="heavy">Heavy</option><option value="whale">Whale</option></select>
+      <select class="inline" onchange="bulkSet('beverage',this.value);this.value=''"><option value="">Beverage...</option><option value="beer">Beer</option><option value="wine">Wine</option><option value="cocktail">Cocktail</option><option value="mixed">Mixed</option></select>
     </div>
 
-    <div class="guest-table-container">
-      <table id="guestTable">
-        <thead>
-          <tr>
-            <th style="width:30px"><input type="checkbox" id="selectAllCb" onchange="toggleSelectAll(this.checked)"></th>
-            <th>Name</th>
-            <th>Wave</th>
-            <th>RSVP</th>
-            <th>Category</th>
-            <th>Beverage Pref</th>
-            <th style="width:30px"></th>
-          </tr>
-        </thead>
+    <div id="emptyState" class="card" style="text-align:center;padding:48px">
+      <p style="font-size:16px;font-weight:600;margin-bottom:8px">No guest list loaded</p>
+      <p style="color:var(--muted);margin-bottom:16px">Import a JSON file to get started, or add guests manually.</p>
+      <button class="btn btn-primary" onclick="document.getElementById('jsonImport').click()">Import Guest List</button>
+    </div>
+
+    <div class="table-container" id="guestTableWrap">
+      <table>
+        <thead><tr><th style="width:28px"></th><th>Name</th><th>Wave</th><th>RSVP</th><th>Category</th><th>Beverage</th><th style="width:28px"></th></tr></thead>
         <tbody id="guestTableBody"></tbody>
       </table>
     </div>
   </div>
 
-  <div class="grid">
-    <!-- Pricing Config -->
-    <div class="card">
-      <h2>Option A: Open Bar</h2>
-      <div class="field">
-        <label>Cost per person ($)</label>
-        <input type="number" id="openBarPP" value="130" step="5">
+  <!-- TAB 2: ASSUMPTIONS -->
+  <div id="tab-assumptions" class="tab-content">
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <h3>Option A &mdash; Open Bar</h3>
+          <div class="field"><label>Cost per person</label><input type="number" id="openBarPP" value="130" step="5"></div>
+        </div>
+        <div class="card">
+          <h3>Option B &mdash; 3-Drink Package</h3>
+          <div class="grid-2">
+            <div class="field"><label>Base cost / person</label><input type="number" id="pkgBasePP" value="55" step="5"></div>
+            <div class="field"><label>Included drinks / person</label><input type="number" id="pkgIncludedPP" value="3" min="0"></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin:8px 0 6px;font-weight:600;text-transform:uppercase">Mandatory Add-ons</div>
+          <div class="grid-2">
+            <div class="field"><label>Prebatched cocktails (qty)</label><input type="number" id="addOnCocktailQty" value="40"></div>
+            <div class="field"><label>@ $ each</label><input type="number" id="addOnCocktailPrice" value="20"></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>Champagne (qty)</label><input type="number" id="addOnChampQty" value="40"></div>
+            <div class="field"><label>@ $ each</label><input type="number" id="addOnChampPrice" value="18"></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin:8px 0 6px;font-weight:600;text-transform:uppercase">Per-Drink Overage</div>
+          <div class="grid-3">
+            <div class="field"><label>Beer</label><input type="number" id="priceBeer" value="8"></div>
+            <div class="field"><label>Wine</label><input type="number" id="priceWine" value="12"></div>
+            <div class="field"><label>Cocktail</label><input type="number" id="priceCocktail" value="15"></div>
+          </div>
+        </div>
       </div>
-
-      <h2 style="margin-top:20px">Option B: 3-Drink Package</h2>
-      <div class="field">
-        <label>Base cost per person ($)</label>
-        <input type="number" id="pkgBasePP" value="55" step="5">
+      <div>
+        <div class="card">
+          <h3>Consumption Profiles <span style="font-weight:400;text-transform:none;letter-spacing:0">(drinks/hr, Gamma)</span></h3>
+          <div class="note">Gamma distribution: right-skewed, non-negative. k = (mean/std)&sup2;. Lower k = heavier tail.</div>
+          <table>
+            <thead><tr><th>Cat.</th><th>Mean</th><th>Std</th><th>k</th></tr></thead>
+            <tbody>
+              <tr><td><span class="tag tag-non">Non</span></td><td><input type="number" id="profNonMean" value="0" step="0.1" style="width:60px"></td><td><input type="number" id="profNonStd" value="0" step="0.1" style="width:60px"></td><td id="shapeNon" class="mono" style="color:#999">-</td></tr>
+              <tr><td><span class="tag tag-light">Light</span></td><td><input type="number" id="profLightMean" value="0.6" step="0.1" style="width:60px"></td><td><input type="number" id="profLightStd" value="0.3" step="0.1" style="width:60px"></td><td id="shapeLight" class="mono">4.0</td></tr>
+              <tr><td><span class="tag tag-moderate">Mod</span></td><td><input type="number" id="profModerateMean" value="1.2" step="0.1" style="width:60px"></td><td><input type="number" id="profModerateStd" value="0.4" step="0.1" style="width:60px"></td><td id="shapeModerate" class="mono">9.0</td></tr>
+              <tr><td><span class="tag tag-heavy">Heavy</span></td><td><input type="number" id="profHeavyMean" value="2.0" step="0.1" style="width:60px"></td><td><input type="number" id="profHeavyStd" value="0.7" step="0.1" style="width:60px"></td><td id="shapeHeavy" class="mono">8.2</td></tr>
+              <tr><td><span class="tag tag-whale">Whale</span></td><td><input type="number" id="profWhaleMean" value="3.5" step="0.1" style="width:60px"></td><td><input type="number" id="profWhaleStd" value="1.2" step="0.1" style="width:60px"></td><td id="shapeWhale" class="mono">8.5</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Beverage Preference Profiles</h3>
+          <table>
+            <thead><tr><th>Pref</th><th>%Beer</th><th>%Wine</th><th>%Cocktail</th></tr></thead>
+            <tbody>
+              <tr><td><span class="tag tag-beer">Beer</span></td><td><input type="number" id="bevBeerBeer" value="70" style="width:50px"></td><td><input type="number" id="bevBeerWine" value="15" style="width:50px"></td><td><input type="number" id="bevBeerCocktail" value="15" style="width:50px"></td></tr>
+              <tr><td><span class="tag tag-wine">Wine</span></td><td><input type="number" id="bevWineBeer" value="10" style="width:50px"></td><td><input type="number" id="bevWineWine" value="75" style="width:50px"></td><td><input type="number" id="bevWineCocktail" value="15" style="width:50px"></td></tr>
+              <tr><td><span class="tag tag-cocktail">Cocktail</span></td><td><input type="number" id="bevCocktailBeer" value="10" style="width:50px"></td><td><input type="number" id="bevCocktailWine" value="10" style="width:50px"></td><td><input type="number" id="bevCocktailCocktail" value="80" style="width:50px"></td></tr>
+              <tr><td><span class="tag tag-mixed">Mixed</span></td><td><input type="number" id="bevMixedBeer" value="33" style="width:50px"></td><td><input type="number" id="bevMixedWine" value="34" style="width:50px"></td><td><input type="number" id="bevMixedCocktail" value="33" style="width:50px"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Simulation</h3>
+          <div class="grid-2">
+            <div class="field"><label>Iterations</label><input type="number" id="simCount" value="10000" min="100" max="100000" step="1000"></div>
+            <div class="field"><label>Event duration (hours)</label><input type="number" id="eventHours" value="5" min="1" max="12"></div>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label>Included drinks per person</label>
-        <input type="number" id="pkgIncludedPP" value="3" min="0">
-      </div>
-      <p class="help" style="margin-bottom:8px">Mandatory add-ons (included in package deal):</p>
-      <div class="field-row">
-        <div class="field"><label>Prebatched cocktails (qty)</label><input type="number" id="addOnCocktailQty" value="40"></div>
-        <div class="field"><label>Price each ($)</label><input type="number" id="addOnCocktailPrice" value="20"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Champagne (qty)</label><input type="number" id="addOnChampQty" value="40"></div>
-        <div class="field"><label>Price each ($)</label><input type="number" id="addOnChampPrice" value="18"></div>
-      </div>
-
-      <h2 style="margin-top:20px">Per-Drink Overage Prices</h2>
-      <div class="field-row-3">
-        <div class="field"><label>Beer ($)</label><input type="number" id="priceBeer" value="8" step="1"></div>
-        <div class="field"><label>Wine ($)</label><input type="number" id="priceWine" value="12" step="1"></div>
-        <div class="field"><label>Cocktail ($)</label><input type="number" id="priceCocktail" value="15" step="1"></div>
-      </div>
-
-      <h2 style="margin-top:20px">Simulation</h2>
-      <div class="field-row">
-        <div class="field"><label>Iterations</label><input type="number" id="simCount" value="10000" min="100" max="100000" step="1000"></div>
-        <div class="field"><label>Event duration (hours)</label><input type="number" id="eventHours" value="5" min="1" max="12"></div>
-      </div>
-      <div class="field" style="margin-top:8px">
-        <label>Simulate with</label>
-        <select id="simMode">
-          <option value="rsvp_yes">RSVP Yes only</option>
-          <option value="rsvp_yes_pending" selected>RSVP Yes + Pending</option>
-          <option value="all">All guests</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Consumption Profiles -->
-    <div class="card">
-      <h2>Consumption Profiles (drinks per hour)</h2>
-      <div class="dist-note">
-        <strong>Gamma distribution</strong> &mdash; right-skewed, non-negative.
-        Lower shape (k) = heavier right tail. Matches WHO epidemiological models.
-      </div>
-      <table>
-        <thead><tr><th>Category</th><th>Mean/hr</th><th>Std Dev</th><th style="font-size:11px">k</th></tr></thead>
-        <tbody>
-          <tr><td><span class="tag non">Non</span></td><td><input type="number" id="profNonMean" value="0" step="0.1" style="width:65px"></td><td><input type="number" id="profNonStd" value="0" step="0.1" style="width:65px"></td><td id="shapeNon" style="color:#999;font-size:12px">-</td></tr>
-          <tr><td><span class="tag light">Light</span></td><td><input type="number" id="profLightMean" value="0.6" step="0.1" style="width:65px"></td><td><input type="number" id="profLightStd" value="0.3" step="0.1" style="width:65px"></td><td id="shapeLight" style="color:#999;font-size:12px">4.0</td></tr>
-          <tr><td><span class="tag moderate">Mod</span></td><td><input type="number" id="profModerateMean" value="1.2" step="0.1" style="width:65px"></td><td><input type="number" id="profModerateStd" value="0.4" step="0.1" style="width:65px"></td><td id="shapeModerate" style="color:#999;font-size:12px">9.0</td></tr>
-          <tr><td><span class="tag heavy">Heavy</span></td><td><input type="number" id="profHeavyMean" value="2.0" step="0.1" style="width:65px"></td><td><input type="number" id="profHeavyStd" value="0.7" step="0.1" style="width:65px"></td><td id="shapeHeavy" style="color:#999;font-size:12px">8.2</td></tr>
-          <tr><td><span class="tag whale">Whale</span></td><td><input type="number" id="profWhaleMean" value="3.5" step="0.1" style="width:65px"></td><td><input type="number" id="profWhaleStd" value="1.2" step="0.1" style="width:65px"></td><td id="shapeWhale" style="color:#999;font-size:12px">8.5</td></tr>
-        </tbody>
-      </table>
-      <p class="help" style="margin-top:8px">k = (mean/std)&sup2;. Lower = more skewed. &lt;2 extreme, &gt;10 near-symmetric.</p>
-
-      <h2 style="margin-top:20px">Beverage Preference Profiles</h2>
-      <p class="help" style="margin-bottom:8px">Drink type split when a guest prefers beer/wine/cocktail/mixed.</p>
-      <table>
-        <thead><tr><th>Pref</th><th>%Beer</th><th>%Wine</th><th>%Cocktail</th></tr></thead>
-        <tbody>
-          <tr><td style="font-size:12px">Beer</td><td><input type="number" id="bevBeerBeer" value="70" style="width:50px"></td><td><input type="number" id="bevBeerWine" value="15" style="width:50px"></td><td><input type="number" id="bevBeerCocktail" value="15" style="width:50px"></td></tr>
-          <tr><td style="font-size:12px">Wine</td><td><input type="number" id="bevWineBeer" value="10" style="width:50px"></td><td><input type="number" id="bevWineWine" value="75" style="width:50px"></td><td><input type="number" id="bevWineCocktail" value="15" style="width:50px"></td></tr>
-          <tr><td style="font-size:12px">Cocktail</td><td><input type="number" id="bevCocktailBeer" value="10" style="width:50px"></td><td><input type="number" id="bevCocktailWine" value="10" style="width:50px"></td><td><input type="number" id="bevCocktailCocktail" value="80" style="width:50px"></td></tr>
-          <tr><td style="font-size:12px">Mixed</td><td><input type="number" id="bevMixedBeer" value="33" style="width:50px"></td><td><input type="number" id="bevMixedWine" value="34" style="width:50px"></td><td><input type="number" id="bevMixedCocktail" value="33" style="width:50px"></td></tr>
-        </tbody>
-      </table>
     </div>
   </div>
 
-  <div style="text-align:center;margin-bottom:32px">
-    <button class="primary" onclick="runSimulation()" style="font-size:17px;padding:14px 48px">Run Simulation</button>
-  </div>
-
-  <!-- Results -->
-  <div id="results" class="hidden">
-    <div class="results-grid">
-      <div class="stat-card green">
-        <div class="label">Option A: Open Bar</div>
-        <div class="value" id="statOpenBar">-</div>
-        <div class="detail">Fixed cost (no variance)</div>
-      </div>
-      <div class="stat-card blue">
-        <div class="label">Option B: Package (Median)</div>
-        <div class="value" id="statPkgMedian">-</div>
-        <div class="detail" id="statPkgRange">-</div>
-      </div>
-      <div class="stat-card" id="savingsCard">
-        <div class="label">Median Savings (B vs A)</div>
-        <div class="value" id="statSavings">-</div>
-        <div class="detail" id="statSavingsDetail">-</div>
-      </div>
+  <!-- TAB 3: RESULTS -->
+  <div id="tab-results" class="tab-content">
+    <div style="text-align:center;margin-bottom:24px">
+      <button class="btn btn-primary btn-lg" onclick="runSimulation()">Run Simulation</button>
+      <div id="simMeta" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
     </div>
-
-    <div class="grid">
-      <div class="card">
-        <h2>Cost Distribution</h2>
-        <div class="chart-container"><canvas id="histChart"></canvas></div>
+    <div id="resultsContent" class="hidden">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="grid-2">
+        <div class="card"><h3>Risk Table (Value at Risk)</h3><table class="risk-table" id="riskTable"><thead><tr><th>Confidence</th><th>Max Pkg Cost</th><th>vs Open Bar</th><th>Drinks</th><th>Per Capita</th></tr></thead><tbody></tbody></table></div>
+        <div class="card"><h3>Cumulative Probability (ECDF)</h3><div class="chart-box"><canvas id="ecdfChart"></canvas></div></div>
       </div>
-      <div class="card">
-        <h2>Percentile Breakdown</h2>
-        <table class="percentile-table" id="percentileTable">
-          <thead><tr><th>Pctl</th><th>Pkg Cost</th><th>vs Open</th><th>Drinks</th><th>B/W/C</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="combo-summary" id="comboSummary"></div>
+      <div class="grid-2">
+        <div class="card"><h3>Cost Distribution</h3><div class="chart-box"><canvas id="histChart"></canvas></div></div>
+        <div class="card"><h3>Scenario Comparison</h3><div class="chart-box"><canvas id="breakdownChart"></canvas></div></div>
       </div>
-    </div>
-
-    <div class="card" style="margin-top:24px">
-      <h2>Cost Breakdown (Median Scenario)</h2>
-      <div class="chart-container"><canvas id="breakdownChart"></canvas></div>
-    </div>
-
-    <div class="grid" style="margin-top:24px">
-      <div class="card">
-        <h2>Drink Type Distribution (Median)</h2>
-        <div class="chart-container"><canvas id="drinkTypeChart"></canvas></div>
+      <div class="grid-2">
+        <div class="card"><h3>Drink Volume by Type (Median)</h3><div class="chart-box"><canvas id="drinkTypeChart"></canvas></div></div>
+        <div class="card"><h3>Overage Cost Decomposition</h3><div class="chart-box"><canvas id="overageChart"></canvas></div></div>
       </div>
-      <div class="card">
-        <h2>Overage Cost by Drink Type</h2>
-        <div class="chart-container"><canvas id="overageTypeChart"></canvas></div>
-      </div>
-    </div>
-
-    <div class="grid" style="margin-top:24px">
-      <div class="card">
-        <h2>Sensitivity: Guest Count</h2>
-        <div class="chart-container"><canvas id="sensitivityChart"></canvas></div>
-      </div>
-      <div class="card">
-        <h2>Breakeven Analysis</h2>
-        <div id="breakevenText" style="font-size:14px;line-height:1.8"></div>
+      <div class="grid-2">
+        <div class="card"><h3>Sensitivity: Guest Count (80&ndash;150)</h3><div class="chart-box"><canvas id="sensitivityChart"></canvas></div></div>
+        <div class="card"><h3>Breakeven Analysis</h3><div id="breakevenText" style="font-size:13px;line-height:1.9"></div></div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// ── Pre-loaded guest list ──
-const INITIAL_GUESTS = [
-  // Wave 1
-  {name:"Dave Robinson",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Benji",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sammy",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Rae",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tim",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sarah",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Mom",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Dad",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Eric",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Jenna",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tia Lupita",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Uncle Rob",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tia Yesi",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Jay",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Dan",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Molly",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Max",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sunny",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Brett",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Taylor",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Justin",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"KK",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Greg",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Emily",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Evan",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Charlotte",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Mitch",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tricia",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Eric K",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Kelli",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Brad",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Claire",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Ethan",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Jessi",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Jesus",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Lauren",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Cooper",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Forest",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Kat",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Foo",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Diana",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Kendall",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Cody",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Helen",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Connor",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Helen Wu",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Connor Steiner",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Robert Jamieson",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Claire Hennessey",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Chichi",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Heath",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Nick",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Eliza",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Matt",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Hannah",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Quentin",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Ryley",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Marcus",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tina",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Avery",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Katie",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Riley",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Meantaek",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tiffany",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Natalie Avellar",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Maggie",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Max M",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Nadia",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Eric N",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Lena",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Harper",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Bella",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Stephen",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tia Jandy",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Chuy",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tio Oscar",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Lola",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tio Juan",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Luz",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tia Lourdes",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Ricardo",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tio Checo",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Ana",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tia Chela",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Mario",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tia Tere",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tio Tito",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Selena",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Titi Carol",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Uncle John",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Millie (Guito)",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Titi Bebe",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Magda",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Paul",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Janelle",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Shirley Robinson",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Luz Palmira (abuela)",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Dan Robinson",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Colleen Robinson",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sara Calderon",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Katy",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Steve",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Becca",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Dan B",wave:"Wave 1",rsvp:"Pending",category:"moderate",beverage:"mixed"},
+const STORAGE_KEY = 'wedding-drink-sim-v2';
+let guests = [];
+const charts = {};
 
-  // Wave 2
-  {name:"Tony Sacharny",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"David",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Lexie",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Robert Ludew",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Danny",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Melissa",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Hannah T",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tyler",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Anna",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Eddie",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Lily",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sophia",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Mac Templeton",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Emma B",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Brendan",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Emma L",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Logan",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Robby Alexander",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Caitlyn Basinski",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Kevin",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Tanya",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Logan K",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Katherine",wave:"Wave 2",rsvp:"Pending",category:"moderate",beverage:"mixed"},
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(guests)); }
+function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) { return null; } }
 
-  // Wave 3
-  {name:"Griffin",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Martha",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Mike",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Meredith",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Andrew",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Vivian",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Charlie",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Niki",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Jon",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sienna",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"David K",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Klara",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Hannah Kupsky",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sarah Burton",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Sarah Burton's Husband",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Nyia",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Garrett",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"DJ",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Allie",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Danielle",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Theo",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Dan J",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"John",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Ryan C",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Ryan G",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Nick D",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Clem",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Lynn",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Ann",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Jim",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Catrina",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Greg C",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Chelsea",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Fell",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Connolley",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Connolley's Wife",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Matt Ryan",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-  {name:"Matt Ryan's Wife",wave:"Wave 3",rsvp:"Pending",category:"moderate",beverage:"mixed"},
-];
-
-// ── localStorage persistence ──
-const STORAGE_KEY = 'wedding-drink-sim';
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(guests));
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['guests','assumptions','results'][i]===id));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
 }
 
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try { return JSON.parse(saved); } catch (e) { return null; }
-  }
-  return null;
-}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
-function resetToOriginal() {
-  if (!confirm('Reset all guest data to the original list? This cannot be undone.')) return;
-  guests = JSON.parse(JSON.stringify(INITIAL_GUESTS));
-  saveState();
-  renderGuestTable();
-}
-
-let guests = loadState() || JSON.parse(JSON.stringify(INITIAL_GUESTS));
-
-let histChartInstance = null;
-let breakdownChartInstance = null;
-let sensitivityChartInstance = null;
-let drinkTypeChartInstance = null;
-let overageTypeChartInstance = null;
-
-function renderGuestTable() {
+function renderGuests() {
   const tbody = document.getElementById('guestTableBody');
   tbody.innerHTML = '';
-  let currentWave = '';
-  guests.forEach((g, i) => {
-    if (g.wave !== currentWave) {
-      currentWave = g.wave;
-      const waveClass = g.wave === 'Wave 1' ? 'w1' : g.wave === 'Wave 2' ? 'w2' : 'w3';
-      const waveCount = guests.filter(x => x.wave === g.wave).length;
-      const headerRow = document.createElement('tr');
-      headerRow.innerHTML = `<td colspan="7" class="wave-header ${waveClass}">${g.wave} (${waveCount} people)</td>`;
-      tbody.appendChild(headerRow);
+  document.getElementById('guestCountBadge').textContent = guests.length;
+  document.getElementById('emptyState').style.display = guests.length ? 'none' : 'block';
+  document.getElementById('guestTableWrap').style.display = guests.length ? 'block' : 'none';
+  let wave = '';
+  guests.forEach((g,i) => {
+    if (g.wave !== wave) {
+      wave = g.wave;
+      const cls = wave==='Wave 1'?'w1':wave==='Wave 2'?'w2':'w3';
+      const cnt = guests.filter(x=>x.wave===wave).length;
+      const r = document.createElement('tr');
+      r.innerHTML = `<td colspan="7" class="wave-hdr ${cls}">${wave} (${cnt})</td>`;
+      tbody.appendChild(r);
     }
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="checkbox" class="guest-cb" data-idx="${i}"></td>
-      <td><input class="guest-name-input" value="${g.name}" onchange="guests[${i}].name=this.value;saveState()"></td>
-      <td>
-        <select onchange="guests[${i}].wave=this.value;saveState();renderGuestTable();updateStats()">
-          <option ${g.wave==='Wave 1'?'selected':''}>Wave 1</option>
-          <option ${g.wave==='Wave 2'?'selected':''}>Wave 2</option>
-          <option ${g.wave==='Wave 3'?'selected':''}>Wave 3</option>
-        </select>
-      </td>
-      <td>
-        <select onchange="guests[${i}].rsvp=this.value;saveState();updateStats()" class="${g.rsvp==='Yes'?'rsvp-yes':g.rsvp==='No'?'rsvp-no':'rsvp-pending'}">
-          <option ${g.rsvp==='Pending'?'selected':''}>Pending</option>
-          <option ${g.rsvp==='Yes'?'selected':''}>Yes</option>
-          <option ${g.rsvp==='No'?'selected':''}>No</option>
-        </select>
-      </td>
-      <td>
-        <select onchange="guests[${i}].category=this.value;saveState();updateStats()">
-          <option value="non" ${g.category==='non'?'selected':''}>Non</option>
-          <option value="light" ${g.category==='light'?'selected':''}>Light</option>
-          <option value="moderate" ${g.category==='moderate'?'selected':''}>Moderate</option>
-          <option value="heavy" ${g.category==='heavy'?'selected':''}>Heavy</option>
-          <option value="whale" ${g.category==='whale'?'selected':''}>Whale</option>
-        </select>
-      </td>
-      <td>
-        <select onchange="guests[${i}].beverage=this.value;saveState();updateStats()">
-          <option value="beer" ${g.beverage==='beer'?'selected':''}>Beer</option>
-          <option value="wine" ${g.beverage==='wine'?'selected':''}>Wine</option>
-          <option value="cocktail" ${g.beverage==='cocktail'?'selected':''}>Cocktail</option>
-          <option value="mixed" ${g.beverage==='mixed'?'selected':''}>Mixed</option>
-        </select>
-      </td>
-      <td><button class="small" onclick="guests.splice(${i},1);saveState();renderGuestTable();updateStats()" title="Remove">&times;</button></td>
-    `;
+      <td><input type="checkbox" class="gcb" data-i="${i}"></td>
+      <td><input class="name-input" value="${esc(g.name)}" onchange="guests[${i}].name=this.value;save()"></td>
+      <td><select class="inline" onchange="guests[${i}].wave=this.value;save();renderGuests()"><option ${g.wave==='Wave 1'?'selected':''}>Wave 1</option><option ${g.wave==='Wave 2'?'selected':''}>Wave 2</option><option ${g.wave==='Wave 3'?'selected':''}>Wave 3</option></select></td>
+      <td><select class="inline" onchange="guests[${i}].rsvp=this.value;save();updateStats()"><option ${g.rsvp==='Pending'?'selected':''}>Pending</option><option ${g.rsvp==='Yes'?'selected':''}>Yes</option><option ${g.rsvp==='No'?'selected':''}>No</option></select></td>
+      <td><select class="inline" onchange="guests[${i}].category=this.value;save();updateStats()"><option value="non" ${g.category==='non'?'selected':''}>Non</option><option value="light" ${g.category==='light'?'selected':''}>Light</option><option value="moderate" ${g.category==='moderate'?'selected':''}>Moderate</option><option value="heavy" ${g.category==='heavy'?'selected':''}>Heavy</option><option value="whale" ${g.category==='whale'?'selected':''}>Whale</option></select></td>
+      <td><select class="inline" onchange="guests[${i}].beverage=this.value;save();updateStats()"><option value="beer" ${g.beverage==='beer'?'selected':''}>Beer</option><option value="wine" ${g.beverage==='wine'?'selected':''}>Wine</option><option value="cocktail" ${g.beverage==='cocktail'?'selected':''}>Cocktail</option><option value="mixed" ${g.beverage==='mixed'?'selected':''}>Mixed</option></select></td>
+      <td><button class="btn btn-sm btn-ghost" onclick="guests.splice(${i},1);save();renderGuests()">&times;</button></td>`;
     tbody.appendChild(tr);
   });
   updateStats();
 }
 
 function updateStats() {
-  const total = guests.length;
-  const w1 = guests.filter(g => g.wave === 'Wave 1').length;
-  const w2 = guests.filter(g => g.wave === 'Wave 2').length;
-  const w3 = guests.filter(g => g.wave === 'Wave 3').length;
-  const yes = guests.filter(g => g.rsvp === 'Yes').length;
-  const no = guests.filter(g => g.rsvp === 'No').length;
-  const pending = guests.filter(g => g.rsvp === 'Pending').length;
-  const cats = {};
-  guests.forEach(g => { cats[g.category] = (cats[g.category] || 0) + 1; });
-
-  document.getElementById('guestStats').innerHTML = `
-    <div class="guest-stat"><strong>${total}</strong> total</div>
-    <div class="guest-stat" style="border-left:3px solid #5b7a5e;padding-left:10px">W1: <strong>${w1}</strong></div>
-    <div class="guest-stat" style="border-left:3px solid #3a6fb5;padding-left:10px">W2: <strong>${w2}</strong></div>
-    <div class="guest-stat" style="border-left:3px solid #b8860b;padding-left:10px">W3: <strong>${w3}</strong></div>
-    <div class="guest-stat"><span class="rsvp-yes">Yes: <strong>${yes}</strong></span></div>
-    <div class="guest-stat"><span class="rsvp-no">No: <strong>${no}</strong></span></div>
-    <div class="guest-stat"><span class="rsvp-pending">Pending: <strong>${pending}</strong></span></div>
-    <div class="guest-stat">${Object.entries(cats).map(([k,v]) => `<span class="tag ${k}" style="margin-right:4px">${v}</span>`).join('')}</div>
-  `;
+  if (!guests.length) { document.getElementById('guestStats').innerHTML = ''; return; }
+  const t = guests.length;
+  const w = [1,2,3].map(n => guests.filter(g=>g.wave==='Wave '+n).length);
+  const rsvp = {Yes:0,No:0,Pending:0}; guests.forEach(g => rsvp[g.rsvp]=(rsvp[g.rsvp]||0)+1);
+  const cats = {}; guests.forEach(g => cats[g.category] = (cats[g.category]||0)+1);
+  document.getElementById('guestStats').innerHTML =
+    `<div class="stat-pill"><strong>${t}</strong> total</div>` +
+    w.map((c,i) => `<div class="stat-pill">W${i+1}: <strong>${c}</strong></div>`).join('') +
+    `<div class="stat-pill" style="color:var(--green)">Yes: <strong>${rsvp.Yes||0}</strong></div>` +
+    `<div class="stat-pill" style="color:var(--red)">No: <strong>${rsvp.No||0}</strong></div>` +
+    `<div class="stat-pill" style="color:var(--muted)">Pending: <strong>${rsvp.Pending||0}</strong></div>` +
+    Object.entries(cats).map(([k,v]) => `<span class="tag tag-${k}" style="margin-left:4px">${k} ${v}</span>`).join('');
 }
 
-function addGuest() {
-  guests.push({name: 'New Guest', wave: 'Wave 1', rsvp: 'Pending', category: 'moderate', beverage: 'mixed'});
-  saveState();
-  renderGuestTable();
-  // Scroll to bottom
-  document.querySelector('.guest-table-container').scrollTop = 99999;
-}
+function addGuest() { guests.push({name:'New Guest',wave:'Wave 1',rsvp:'Pending',category:'moderate',beverage:'mixed'}); save(); renderGuests(); }
+function clearAllGuests() { if(!confirm('Remove all guests?'))return; guests=[]; save(); renderGuests(); }
+function bulkSet(field,val) { if(!val)return; document.querySelectorAll('.gcb:checked').forEach(cb=>{guests[+cb.dataset.i][field]=val;}); save(); renderGuests(); }
+function toggleSelectAll(c) { document.querySelectorAll('.gcb').forEach(cb=>cb.checked=c); }
 
-function getSelectedIndices() {
-  return [...document.querySelectorAll('.guest-cb:checked')].map(cb => parseInt(cb.dataset.idx));
-}
-
-function bulkSet(field, value) {
-  if (!value) return;
-  const indices = getSelectedIndices();
-  indices.forEach(i => { guests[i][field] = value; });
-  saveState();
-  renderGuestTable();
-  // Reset the select
-  document.getElementById('bulk' + field.charAt(0).toUpperCase() + field.slice(1)).value = '';
-}
-
-function selectAll() { document.querySelectorAll('.guest-cb').forEach(cb => cb.checked = true); }
-function selectNone() { document.querySelectorAll('.guest-cb').forEach(cb => cb.checked = false); }
-function toggleSelectAll(checked) { document.querySelectorAll('.guest-cb').forEach(cb => cb.checked = checked); }
-
-// CSV upload (replaces guest list)
-document.getElementById('csvUpload').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+document.getElementById('jsonImport').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if(!file)return;
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const lines = ev.target.result.split('\n').filter(l => l.trim());
-    const header = lines[0].toLowerCase();
-    const hasHeader = header.includes('name') || header.includes('category');
-    const dataLines = hasHeader ? lines.slice(1) : lines;
-    const newGuests = [];
-    dataLines.forEach(line => {
-      const parts = line.split(',').map(s => s.trim().replace(/"/g, ''));
-      if (!parts[0]) return;
-      newGuests.push({
-        name: parts[0],
-        wave: parts[1] || 'Wave 1',
-        rsvp: parts[2] || 'Pending',
-        category: normalizeCategory(parts[3] || 'moderate'),
-        beverage: normalizeBeverage(parts[4] || 'mixed')
-      });
-    });
-    if (newGuests.length > 0) {
-      guests = newGuests;
-      saveState();
-      renderGuestTable();
-    }
+    try { const d=JSON.parse(ev.target.result); if(Array.isArray(d)&&d.length){guests=d;save();renderGuests();} } catch(err){alert('Invalid JSON');}
   };
-  reader.readAsText(file);
+  reader.readAsText(file); this.value='';
 });
 
-function normalizeCategory(s) {
-  s = s.toLowerCase().trim();
-  if (s.includes('non') || s === '0' || s === 'none' || s === 'sober') return 'non';
-  if (s.includes('light') || s === '1') return 'light';
-  if (s.includes('heavy') || s === '3') return 'heavy';
-  if (s.includes('whale') || s.includes('1%') || s === '4') return 'whale';
-  return 'moderate';
+function exportGuests() {
+  const blob = new Blob([JSON.stringify(guests,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'wedding-guests-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
 }
 
-function normalizeBeverage(s) {
-  s = s.toLowerCase().trim();
-  if (s.includes('beer') || s === 'b') return 'beer';
-  if (s.includes('wine') || s === 'w') return 'wine';
-  if (s.includes('cocktail') || s.includes('liquor') || s.includes('spirit') || s === 'c') return 'cocktail';
-  return 'mixed';
-}
+// Math
+function val(id) { return parseFloat(document.getElementById(id).value)||0; }
+function getProf(cat) { const p='prof'+cat[0].toUpperCase()+cat.slice(1); return {mean:val(p+'Mean'),std:val(p+'Std')}; }
+function getBev(bev) { const p='bev'+bev[0].toUpperCase()+bev.slice(1); return {beer:val(p+'Beer')/100,wine:val(p+'Wine')/100,cocktail:val(p+'Cocktail')/100}; }
 
-function val(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function rn() { let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function rg(k,th) { if(k<1)return rg(k+1,th)*Math.pow(Math.random(),1/k); const d=k-1/3,c=1/Math.sqrt(9*d); while(true){let x,v;do{x=rn();v=1+c*x}while(v<=0);v=v*v*v;const u=Math.random();if(u<1-0.0331*x*x*x*x)return d*v*th;if(Math.log(u)<0.5*x*x+d*(1-v+Math.log(v)))return d*v*th;} }
+function sr(m,s) { if(m<=0)return 0; if(s<=0)return m; return rg(m*m/(s*s),s*s/m); }
 
-function getProfile(cat) {
-  const prefix = 'prof' + cat.charAt(0).toUpperCase() + cat.slice(1);
-  return { mean: val(prefix + 'Mean'), std: val(prefix + 'Std') };
-}
-
-function getBeverageProfile(bev) {
-  const prefix = 'bev' + bev.charAt(0).toUpperCase() + bev.slice(1);
-  return {
-    beerPct: val(prefix + 'Beer') / 100,
-    winePct: val(prefix + 'Wine') / 100,
-    cocktailPct: val(prefix + 'Cocktail') / 100,
-  };
-}
-
-// Gamma distribution (Marsaglia & Tsang)
-function randGamma(shape, scale) {
-  if (shape < 1) return randGamma(shape + 1, scale) * Math.pow(Math.random(), 1 / shape);
-  const d = shape - 1/3, c = 1 / Math.sqrt(9 * d);
-  while (true) {
-    let x, v;
-    do { x = randStdNormal(); v = 1 + c * x; } while (v <= 0);
-    v = v * v * v;
-    const u = Math.random();
-    if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v * scale;
-    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v * scale;
-  }
-}
-
-function randStdNormal() {
-  let u = 0, v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-}
-
-function sampleDrinksPerHour(mean, std) {
-  if (mean <= 0) return 0;
-  if (std <= 0) return mean;
-  const k = (mean * mean) / (std * std);
-  const theta = (std * std) / mean;
-  return randGamma(k, theta);
-}
-
-// Update shape display
-function updateShapeDisplays() {
-  ['Light', 'Moderate', 'Heavy', 'Whale'].forEach(cat => {
-    const mean = val('prof' + cat + 'Mean'), std = val('prof' + cat + 'Std');
-    const el = document.getElementById('shape' + cat);
-    if (mean > 0 && std > 0) {
-      const k = (mean * mean) / (std * std);
-      el.textContent = k.toFixed(1);
-      el.style.color = k < 2 ? '#b5473a' : k < 5 ? '#b8860b' : '#4a7c4f';
-    } else { el.textContent = '-'; el.style.color = '#999'; }
+function updateShapes() {
+  ['Light','Moderate','Heavy','Whale'].forEach(c=>{
+    const m=val('prof'+c+'Mean'),s=val('prof'+c+'Std'),el=document.getElementById('shape'+c);
+    if(m>0&&s>0){const k=m*m/(s*s);el.textContent=k.toFixed(1);el.style.color=k<2?'var(--red)':k<5?'var(--gold)':'var(--green)';}
+    else{el.textContent='-';el.style.color='#999';}
   });
 }
-['profLightMean','profLightStd','profModerateMean','profModerateStd','profHeavyMean','profHeavyStd','profWhaleMean','profWhaleStd'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updateShapeDisplays);
-});
+['profLightMean','profLightStd','profModerateMean','profModerateStd','profHeavyMean','profHeavyStd','profWhaleMean','profWhaleStd'].forEach(id=>document.getElementById(id).addEventListener('input',updateShapes));
 
 function getSimGuests() {
-  const mode = document.getElementById('simMode').value;
-  return guests.filter(g => {
-    if (mode === 'rsvp_yes') return g.rsvp === 'Yes';
-    if (mode === 'rsvp_yes_pending') return g.rsvp !== 'No';
-    return true; // all
-  });
+  const m=document.getElementById('simMode').value;
+  return guests.filter(g=>m==='rsvp_yes'?g.rsvp==='Yes':m==='rsvp_yes_pending'?g.rsvp!=='No':true);
 }
 
-function simulateOnce(simGuests, hours) {
-  let totalDrinks = 0, beers = 0, wines = 0, cocktails = 0;
-  for (const guest of simGuests) {
-    const prof = getProfile(guest.category);
-    const drinksPerHour = sampleDrinksPerHour(prof.mean, prof.std);
-    const totalForGuest = Math.round(drinksPerHour * hours);
-    if (totalForGuest <= 0) continue;
-    totalDrinks += totalForGuest;
-    const bevProf = getBeverageProfile(guest.beverage);
-    for (let d = 0; d < totalForGuest; d++) {
-      const r = Math.random();
-      if (r < bevProf.beerPct) beers++;
-      else if (r < bevProf.beerPct + bevProf.winePct) wines++;
-      else cocktails++;
-    }
-  }
-  return { totalDrinks, beers, wines, cocktails };
+function simOnce(gs,hrs) {
+  let tot=0,b=0,w=0,c=0;
+  for(const g of gs){const p=getProf(g.category),rate=sr(p.mean,p.std),n=Math.round(rate*hrs);if(n<=0)continue;tot+=n;const bp=getBev(g.beverage);for(let d=0;d<n;d++){const r=Math.random();if(r<bp.beer)b++;else if(r<bp.beer+bp.wine)w++;else c++;}}
+  return {tot,b,w,c};
 }
 
-function computePackageCost(n, drinks) {
-  const baseCost = n * val('pkgBasePP');
-  const addOnCost = val('addOnCocktailQty') * val('addOnCocktailPrice') + val('addOnChampQty') * val('addOnChampPrice');
-  const includedDrinks = n * val('pkgIncludedPP');
-  const addOnDrinkCount = val('addOnCocktailQty') + val('addOnChampQty');
-  const totalAvailable = includedDrinks + addOnDrinkCount;
-  const overageDrinks = Math.max(0, drinks.totalDrinks - totalAvailable);
-  let overageCost = 0, overageBeers = 0, overageWines = 0, overageCocktails = 0;
-  if (overageDrinks > 0 && drinks.totalDrinks > 0) {
-    const beerFrac = drinks.beers / drinks.totalDrinks;
-    const wineFrac = drinks.wines / drinks.totalDrinks;
-    overageBeers = Math.round(overageDrinks * beerFrac);
-    overageWines = Math.round(overageDrinks * wineFrac);
-    overageCocktails = overageDrinks - overageBeers - overageWines;
-    overageCost = overageBeers * val('priceBeer') + overageWines * val('priceWine') + overageCocktails * val('priceCocktail');
-  }
-  return { baseCost, addOnCost, overageCost, overageDrinks, totalAvailable, overageBeers, overageWines, overageCocktails, total: baseCost + addOnCost + overageCost };
+function pkgCost(n,dr) {
+  const base=n*val('pkgBasePP'),addon=val('addOnCocktailQty')*val('addOnCocktailPrice')+val('addOnChampQty')*val('addOnChampPrice');
+  const pool=n*val('pkgIncludedPP')+val('addOnCocktailQty')+val('addOnChampQty');
+  const over=Math.max(0,dr.tot-pool); let oCost=0,oB=0,oW=0,oC=0;
+  if(over>0&&dr.tot>0){oB=Math.round(over*dr.b/dr.tot);oW=Math.round(over*dr.w/dr.tot);oC=over-oB-oW;oCost=oB*val('priceBeer')+oW*val('priceWine')+oC*val('priceCocktail');}
+  return {base,addon,oCost,over,pool,oB,oW,oC,total:base+addon+oCost};
 }
 
-function percentile(arr, p) {
-  const idx = Math.floor(arr.length * p / 100);
-  return arr[Math.min(idx, arr.length - 1)];
-}
-
-function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+function pctl(arr,p) { return arr[Math.min(Math.floor(arr.length*p/100),arr.length-1)]; }
+function fmt(n) { return '$'+Math.round(n).toLocaleString(); }
+function dc(key) { if(charts[key]){charts[key].destroy();delete charts[key];} }
 
 function runSimulation() {
-  const simGuests = getSimGuests();
-  const n = simGuests.length;
-  if (n === 0) { alert('No guests match the simulation filter. Check RSVP statuses.'); return; }
-  const hours = val('eventHours');
-  const iterations = val('simCount');
-  const openBarTotal = n * val('openBarPP');
+  const sg=getSimGuests(),n=sg.length;
+  if(!n){alert('No guests match filter.');return;}
+  const hrs=val('eventHours'),iters=val('simCount'),ob=n*val('openBarPP');
 
-  const results = [];
-  for (let i = 0; i < iterations; i++) {
-    const drinks = simulateOnce(simGuests, hours);
-    const pkg = computePackageCost(n, drinks);
-    results.push({ ...pkg, ...drinks });
-  }
+  const res=[];
+  for(let i=0;i<iters;i++){const dr=simOnce(sg,hrs);res.push({...pkgCost(n,dr),...dr});}
+  res.sort((a,b)=>a.total-b.total);
+  const tots=res.map(r=>r.total),drinks=res.map(r=>r.tot).sort((a,b)=>a-b);
+  const med=pctl(tots,50),p5=pctl(tots,5),p95=pctl(tots,95),p99=pctl(tots,99);
+  const mean=tots.reduce((a,b)=>a+b,0)/tots.length;
+  const std=Math.sqrt(tots.reduce((a,b)=>a+(b-mean)**2,0)/tots.length);
+  const pctCh=Math.round(tots.filter(t=>t<ob).length/tots.length*100);
+  const mr=res[Math.floor(res.length/2)];
 
-  results.sort((a, b) => a.total - b.total);
-  const totals = results.map(r => r.total);
-  const median = percentile(totals, 50);
-  const p5 = percentile(totals, 5);
-  const p95 = percentile(totals, 95);
+  document.getElementById('simMeta').textContent=`${iters.toLocaleString()} iterations | ${n} guests | ${hrs}h | Gamma`;
 
-  document.getElementById('statOpenBar').textContent = fmt(openBarTotal);
-  document.getElementById('statPkgMedian').textContent = fmt(median);
-  document.getElementById('statPkgRange').textContent = `P5: ${fmt(p5)} — P95: ${fmt(p95)}`;
+  // KPIs
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi kpi-neutral"><div class="kpi-label">Open Bar (fixed)</div><div class="kpi-value">${fmt(ob)}</div><div class="kpi-sub">${fmt(val('openBarPP'))}/person &times; ${n}</div></div>
+    <div class="kpi kpi-blue"><div class="kpi-label">Package (median)</div><div class="kpi-value">${fmt(med)}</div><div class="kpi-sub">90% CI: ${fmt(p5)} &ndash; ${fmt(p95)}</div></div>
+    <div class="kpi ${med<ob?'kpi-green':'kpi-red'}"><div class="kpi-label">${med<ob?'Median Savings':'Median Extra'}</div><div class="kpi-value">${fmt(Math.abs(ob-med))}</div><div class="kpi-sub">Pkg cheaper in ${pctCh}% of sims</div></div>
+    <div class="kpi kpi-neutral"><div class="kpi-label">Drinks/Person (med)</div><div class="kpi-value">${(pctl(drinks,50)/n).toFixed(1)}</div><div class="kpi-sub">${Math.round(pctl(drinks,50))} total &middot; ${(pctl(drinks,50)/n/hrs).toFixed(1)}/hr</div></div>`;
 
-  const savings = openBarTotal - median;
-  document.getElementById('statSavings').textContent = fmt(Math.abs(savings));
-  const savingsCard = document.getElementById('savingsCard');
-  if (savings > 0) {
-    savingsCard.className = 'stat-card green';
-    document.getElementById('statSavingsDetail').textContent = `Package cheaper in ${Math.round(totals.filter(t => t < openBarTotal).length / totals.length * 100)}% of sims`;
-  } else {
-    savingsCard.className = 'stat-card red';
-    document.getElementById('statSavingsDetail').textContent = `Open bar cheaper in ${Math.round(totals.filter(t => t >= openBarTotal).length / totals.length * 100)}% of sims`;
-  }
+  // Risk table
+  const rps=[50,75,90,95,99];
+  document.querySelector('#riskTable tbody').innerHTML=rps.map(p=>{
+    const c=pctl(tots,p),d=pctl(drinks,p),diff=c-ob;
+    return `<tr><td>${p}%</td><td>${fmt(c)}</td><td style="color:${diff<0?'var(--green)':'var(--red)'}">${diff<0?'':'+'}${fmt(diff)}</td><td>${Math.round(d)}</td><td>${(d/n).toFixed(1)}</td></tr>`;
+  }).join('');
 
-  // Percentile table
-  const pctiles = [5, 10, 25, 50, 75, 90, 95, 99];
-  const tbody = document.querySelector('#percentileTable tbody');
-  tbody.innerHTML = '';
-  const drinkTotals = results.map(r => r.totalDrinks); drinkTotals.sort((a, b) => a - b);
-  for (const p of pctiles) {
-    const cost = percentile(totals, p);
-    const drinks = percentile(drinkTotals, p);
-    const diff = cost - openBarTotal;
-    const idx = Math.floor(results.length * p / 100);
-    const r = results[Math.min(idx, results.length - 1)];
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>P${p}</td><td>${fmt(cost)}</td><td style="color:${diff<0?'#4a7c4f':'#b5473a'}">${diff<0?'-':'+'}${fmt(Math.abs(diff))}</td><td>${Math.round(drinks)}</td><td style="font-size:11px;color:#888">${r.beers}/${r.wines}/${r.cocktails}</td>`;
-    tbody.appendChild(tr);
-  }
-
-  const medianResult = results[Math.floor(results.length / 2)];
-  const avgOverageDrinkCost = medianResult.overageDrinks > 0 ? (medianResult.overageCost / medianResult.overageDrinks).toFixed(2) : '0';
-  document.getElementById('comboSummary').innerHTML = `
-    <strong>Median (${n} guests, ${hours}hrs):</strong><br>
-    Base: ${fmt(medianResult.baseCost)} + Add-ons: ${fmt(medianResult.addOnCost)}<br>
-    Pool: ${medianResult.totalAvailable} drinks (${n*val('pkgIncludedPP')} pkg + ${val('addOnCocktailQty')+val('addOnChampQty')} add-on)<br>
-    Consumed: ~${Math.round(medianResult.totalDrinks)} (${medianResult.beers}B/${medianResult.wines}W/${medianResult.cocktails}C)<br>
-    Overage: ${Math.round(medianResult.overageDrinks)} @ avg $${avgOverageDrinkCost} = ${fmt(medianResult.overageCost)}<br>
-    <strong>Total: ${fmt(medianResult.total)}</strong> vs Open Bar <strong>${fmt(openBarTotal)}</strong>
-  `;
+  // ECDF
+  dc('ecdf');
+  const ecdfN=150,ecdfD=[];
+  for(let i=0;i<ecdfN;i++){const v=tots[Math.floor(i/ecdfN*tots.length)];ecdfD.push({x:v,y:(i+1)/ecdfN*100});}
+  charts.ecdf=new Chart(document.getElementById('ecdfChart'),{type:'scatter',data:{datasets:[
+    {label:'Package CDF',data:ecdfD,showLine:true,pointRadius:0,borderColor:'rgba(59,130,246,0.8)',borderWidth:2,fill:false},
+    {label:'Open Bar',data:[{x:ob,y:0},{x:ob,y:100}],showLine:true,pointRadius:0,borderColor:'var(--red)',borderWidth:2,borderDash:[6,4],fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Total Cost'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString()}},y:{title:{display:true,text:'Cumulative Probability (%)'},min:0,max:100}},plugins:{legend:{position:'bottom'}}}});
 
   // Histogram
-  const binCount = 40;
-  const minCost = totals[0], maxCost = totals[totals.length - 1];
-  const binWidth = (maxCost - minCost) / binCount || 1;
-  const bins = new Array(binCount).fill(0);
-  const binLabels = [];
-  for (let i = 0; i < binCount; i++) binLabels.push(fmt(minCost + i * binWidth));
-  for (const t of totals) bins[Math.min(Math.floor((t - minCost) / binWidth), binCount - 1)]++;
-
-  if (histChartInstance) histChartInstance.destroy();
-  histChartInstance = new Chart(document.getElementById('histChart').getContext('2d'), {
-    type: 'bar',
-    data: { labels: binLabels, datasets: [{ label: 'Frequency', data: bins, backgroundColor: 'rgba(59,130,246,0.5)', borderColor: 'rgba(59,130,246,0.8)', borderWidth: 1 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8, maxRotation: 45 }, title: { display: true, text: 'Total Cost' } }, y: { title: { display: true, text: 'Frequency' } } } },
-    plugins: [{ afterDraw(chart) {
-      const xScale = chart.scales.x, yScale = chart.scales.y, ctx = chart.ctx;
-      const openBarBin = Math.min(Math.floor((openBarTotal - minCost) / binWidth), binCount - 1);
-      if (openBarBin >= 0 && openBarBin < binCount) {
-        const x = xScale.getPixelForValue(openBarBin);
-        ctx.save(); ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
-        ctx.beginPath(); ctx.moveTo(x, yScale.top); ctx.lineTo(x, yScale.bottom); ctx.stroke();
-        ctx.fillStyle = '#e74c3c'; ctx.font = '12px sans-serif'; ctx.fillText('Open Bar ' + fmt(openBarTotal), x + 4, yScale.top + 14);
-        ctx.restore();
-      }
-    }}]
-  });
+  dc('hist');
+  const nBins=50,mn=tots[0],mx=tots[tots.length-1],bw=(mx-mn)/nBins||1;
+  const bc=new Array(nBins).fill(0),bl=[];
+  for(let i=0;i<nBins;i++)bl.push(Math.round(mn+i*bw));
+  for(const t of tots)bc[Math.min(Math.floor((t-mn)/bw),nBins-1)]++;
+  charts.hist=new Chart(document.getElementById('histChart'),{type:'bar',data:{labels:bl.map(v=>fmt(v)),datasets:[{data:bc,backgroundColor:'rgba(59,130,246,0.4)',borderColor:'rgba(59,130,246,0.7)',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:8,maxRotation:45}},y:{title:{display:true,text:'Frequency'}}}},plugins:[{afterDraw(ch){const xs=ch.scales.x,ys=ch.scales.y,ctx=ch.ctx,bi=Math.min(Math.floor((ob-mn)/bw),nBins-1);if(bi>=0&&bi<nBins){const x=xs.getPixelForValue(bi);ctx.save();ctx.strokeStyle='var(--red)';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(x,ys.top);ctx.lineTo(x,ys.bottom);ctx.stroke();ctx.fillStyle='var(--red)';ctx.font='bold 11px sans-serif';ctx.fillText('Open Bar '+fmt(ob),x+4,ys.top+12);ctx.restore();}}}]});
 
   // Breakdown
-  if (breakdownChartInstance) breakdownChartInstance.destroy();
-  breakdownChartInstance = new Chart(document.getElementById('breakdownChart').getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: ['Open Bar', 'Pkg (P5)', 'Pkg (Median)', 'Pkg (P95)'],
-      datasets: [
-        { label: 'Base', data: [0, medianResult.baseCost, medianResult.baseCost, medianResult.baseCost], backgroundColor: '#93c5a8' },
-        { label: 'Add-ons', data: [0, medianResult.addOnCost, medianResult.addOnCost, medianResult.addOnCost], backgroundColor: '#7aaed4' },
-        { label: 'Overage', data: [0, Math.max(0, p5 - medianResult.baseCost - medianResult.addOnCost), medianResult.overageCost, Math.max(0, p95 - medianResult.baseCost - medianResult.addOnCost)], backgroundColor: '#e8a87c' },
-        { label: 'Open Bar', data: [openBarTotal, 0, 0, 0], backgroundColor: '#d4a0a0' },
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { x: {}, y: { ticks: { callback: v => '$' + v.toLocaleString() } } } }
-  });
+  dc('breakdown');
+  charts.breakdown=new Chart(document.getElementById('breakdownChart'),{type:'bar',data:{labels:['Open Bar','Pkg P5','Pkg Med','Pkg P95','Pkg P99'],datasets:[
+    {label:'Base',data:[0,mr.base,mr.base,mr.base,mr.base],backgroundColor:'#93c5a8'},
+    {label:'Add-ons',data:[0,mr.addon,mr.addon,mr.addon,mr.addon],backgroundColor:'#7aaed4'},
+    {label:'Overage',data:[0,Math.max(0,p5-mr.base-mr.addon),mr.oCost,Math.max(0,p95-mr.base-mr.addon),Math.max(0,p99-mr.base-mr.addon)],backgroundColor:'#e8a87c'},
+    {label:'Open Bar',data:[ob,0,0,0,0],backgroundColor:'#d4a0a0'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{},y:{stacked:true,ticks:{callback:v=>'$'+v.toLocaleString()}}}}});
 
-  // Drink type donut
-  if (drinkTypeChartInstance) drinkTypeChartInstance.destroy();
-  drinkTypeChartInstance = new Chart(document.getElementById('drinkTypeChart').getContext('2d'), {
-    type: 'doughnut',
-    data: { labels: ['Beer', 'Wine', 'Cocktail'], datasets: [{ data: [medianResult.beers, medianResult.wines, medianResult.cocktails], backgroundColor: ['#daa520', '#8b2252', '#2f6b7a'] }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, title: { display: true, text: `${medianResult.totalDrinks} total drinks` } } }
-  });
+  // Drink type
+  dc('drinkType');
+  charts.drinkType=new Chart(document.getElementById('drinkTypeChart'),{type:'doughnut',data:{labels:[`Beer (${mr.b})`,`Wine (${mr.w})`,`Cocktail (${mr.c})`],datasets:[{data:[mr.b,mr.w,mr.c],backgroundColor:['#daa520','#8b2252','#2f6b7a']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:`${mr.tot} total | ${mr.over} overage | pool: ${mr.pool}`}}}});
 
-  // Overage by type
-  if (overageTypeChartInstance) overageTypeChartInstance.destroy();
-  overageTypeChartInstance = new Chart(document.getElementById('overageTypeChart').getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: ['Beer', 'Wine', 'Cocktail'],
-      datasets: [
-        { label: 'Drinks', data: [medianResult.overageBeers, medianResult.overageWines, medianResult.overageCocktails], backgroundColor: ['rgba(218,165,32,0.5)', 'rgba(139,34,82,0.5)', 'rgba(47,107,122,0.5)'], yAxisID: 'y' },
-        { label: 'Cost', data: [medianResult.overageBeers * val('priceBeer'), medianResult.overageWines * val('priceWine'), medianResult.overageCocktails * val('priceCocktail')], backgroundColor: ['rgba(218,165,32,0.9)', 'rgba(139,34,82,0.9)', 'rgba(47,107,122,0.9)'], yAxisID: 'y1' }
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, title: { display: true, text: `${medianResult.overageDrinks} overage = ${fmt(medianResult.overageCost)}` } }, scales: { y: { position: 'left', title: { display: true, text: 'Drinks' } }, y1: { position: 'right', title: { display: true, text: '$' }, ticks: { callback: v => '$' + v }, grid: { drawOnChartArea: false } } } }
-  });
+  // Overage
+  dc('overage');
+  charts.overage=new Chart(document.getElementById('overageChart'),{type:'bar',data:{labels:['Beer','Wine','Cocktail'],datasets:[
+    {label:'Drinks',data:[mr.oB,mr.oW,mr.oC],backgroundColor:['rgba(218,165,32,0.4)','rgba(139,34,82,0.4)','rgba(47,107,122,0.4)'],yAxisID:'y'},
+    {label:'Cost',data:[mr.oB*val('priceBeer'),mr.oW*val('priceWine'),mr.oC*val('priceCocktail')],backgroundColor:['rgba(218,165,32,0.9)','rgba(139,34,82,0.9)','rgba(47,107,122,0.9)'],yAxisID:'y1'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:`${mr.over} overage drinks = ${fmt(mr.oCost)}`}},scales:{y:{position:'left',title:{display:true,text:'Drinks'}},y1:{position:'right',title:{display:true,text:'$'},ticks:{callback:v=>'$'+v},grid:{drawOnChartArea:false}}}}});
 
   // Sensitivity
-  const guestCounts = [];
-  for (let g = 80; g <= 150; g += 5) guestCounts.push(g);
-  const openBarLine = guestCounts.map(g => g * val('openBarPP'));
-  const pkgMedianLine = [], pkgP25Line = [], pkgP75Line = [];
-  for (const gc of guestCounts) {
-    // Scale the sim guests proportionally
-    const scale = gc / n;
-    const miniResults = [];
-    for (let i = 0; i < 1000; i++) {
-      // Sample a random subset of size gc from the guest profiles (with replacement if needed)
-      const sampled = [];
-      for (let j = 0; j < gc; j++) sampled.push(simGuests[Math.floor(Math.random() * simGuests.length)]);
-      const dr = simulateOnce(sampled, hours);
-      miniResults.push(computePackageCost(gc, dr).total);
-    }
-    miniResults.sort((a, b) => a - b);
-    pkgP25Line.push(percentile(miniResults, 25));
-    pkgMedianLine.push(percentile(miniResults, 50));
-    pkgP75Line.push(percentile(miniResults, 75));
-  }
-
-  if (sensitivityChartInstance) sensitivityChartInstance.destroy();
-  sensitivityChartInstance = new Chart(document.getElementById('sensitivityChart').getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: guestCounts,
-      datasets: [
-        { label: 'Open Bar', data: openBarLine, borderColor: '#e74c3c', borderWidth: 2, fill: false, pointRadius: 0 },
-        { label: 'Pkg P25', data: pkgP25Line, borderColor: 'rgba(59,130,246,0.3)', borderWidth: 1, borderDash: [4,4], fill: false, pointRadius: 0 },
-        { label: 'Pkg Median', data: pkgMedianLine, borderColor: '#3b82f6', borderWidth: 2, fill: false, pointRadius: 0 },
-        { label: 'Pkg P75', data: pkgP75Line, borderColor: 'rgba(59,130,246,0.3)', borderWidth: 1, borderDash: [4,4], fill: false, pointRadius: 0 },
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { x: { title: { display: true, text: 'Guest Count' } }, y: { ticks: { callback: v => '$' + v.toLocaleString() } } } }
-  });
+  dc('sensitivity');
+  const gcs=[];for(let g=80;g<=150;g+=5)gcs.push(g);
+  const oLine=gcs.map(g=>g*val('openBarPP')),mLine=[],p25L=[],p75L=[];
+  for(const gc of gcs){const mr2=[];for(let i=0;i<1000;i++){const s=[];for(let j=0;j<gc;j++)s.push(sg[Math.floor(Math.random()*sg.length)]);mr2.push(pkgCost(gc,simOnce(s,hrs)).total);}mr2.sort((a,b)=>a-b);p25L.push(pctl(mr2,25));mLine.push(pctl(mr2,50));p75L.push(pctl(mr2,75));}
+  charts.sensitivity=new Chart(document.getElementById('sensitivityChart'),{type:'line',data:{labels:gcs,datasets:[
+    {label:'Open Bar',data:oLine,borderColor:'var(--red)',borderWidth:2,fill:false,pointRadius:0},
+    {label:'Pkg P25',data:p25L,borderColor:'rgba(59,130,246,0.25)',borderWidth:1,borderDash:[4,4],fill:false,pointRadius:0},
+    {label:'Pkg Median',data:mLine,borderColor:'rgba(59,130,246,0.8)',borderWidth:2,fill:false,pointRadius:0},
+    {label:'Pkg P75',data:p75L,borderColor:'rgba(59,130,246,0.25)',borderWidth:1,borderDash:[4,4],fill:false,pointRadius:0},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{x:{title:{display:true,text:'Guests'}},y:{ticks:{callback:v=>'$'+v.toLocaleString()}}}}});
 
   // Breakeven
-  const addOnFixedCost = val('addOnCocktailQty') * val('addOnCocktailPrice') + val('addOnChampQty') * val('addOnChampPrice');
-  const weightedAvgPrice = medianResult.totalDrinks > 0
-    ? (medianResult.beers * val('priceBeer') + medianResult.wines * val('priceWine') + medianResult.cocktails * val('priceCocktail')) / medianResult.totalDrinks
-    : (val('priceBeer') + val('priceWine') + val('priceCocktail')) / 3;
-  const pkgFixed = n * val('pkgBasePP') + addOnFixedCost;
-  const breakevenOverage = (openBarTotal - pkgFixed) / weightedAvgPrice;
-  const breakevenTotal = breakevenOverage + n * val('pkgIncludedPP') + val('addOnCocktailQty') + val('addOnChampQty');
-  const breakevenPerPerson = breakevenTotal / n;
-  const pctCheaper = Math.round(totals.filter(t => t < openBarTotal).length / totals.length * 100);
-  const worstCaseOverageCost = medianResult.overageDrinks * val('priceCocktail');
+  const af=val('addOnCocktailQty')*val('addOnCocktailPrice')+val('addOnChampQty')*val('addOnChampPrice');
+  const wAvg=mr.tot>0?(mr.b*val('priceBeer')+mr.w*val('priceWine')+mr.c*val('priceCocktail'))/mr.tot:(val('priceBeer')+val('priceWine')+val('priceCocktail'))/3;
+  const fix=n*val('pkgBasePP')+af;
+  const beO=(ob-fix)/wAvg,beT=beO+n*val('pkgIncludedPP')+val('addOnCocktailQty')+val('addOnChampQty'),bePP=beT/n;
+  document.getElementById('breakevenText').innerHTML=`
+    <strong>Fixed cost gap:</strong> ${fmt(ob-fix)}<br>
+    <span style="color:var(--muted)">Open bar ${fmt(ob)} &minus; Pkg fixed ${fmt(fix)}</span><br><br>
+    <strong>Breakeven:</strong> <span class="mono">${Math.round(beT)}</span> total drinks<br>
+    <span style="color:var(--muted)">${bePP.toFixed(1)}/person &middot; ${(bePP/hrs).toFixed(1)}/hr &middot; @ ${fmt(wAvg)}/drink avg</span><br><br>
+    <strong>Tail risk:</strong> all-cocktail overage<br>
+    <span style="color:var(--muted)">${mr.over} &times; $${val('priceCocktail')} = ${fmt(mr.over*val('priceCocktail'))} &rarr; ${fmt(fix+mr.over*val('priceCocktail'))}</span><br><br>
+    <strong>Verdict:</strong> Pkg cheaper in <strong>${pctCh}%</strong> of sims<br>
+    <span class="mono">&mu; &plusmn; &sigma;:</span> ${fmt(mean)} &plusmn; ${fmt(std)}<br>
+    Median &Delta;: <strong>${fmt(Math.abs(ob-med))}</strong> ${med<ob?'saved with pkg':'extra vs open bar'}`;
 
-  document.getElementById('breakevenText').innerHTML = `
-    <strong>Fixed costs (${n} guests):</strong><br>
-    Open bar: <strong>${fmt(openBarTotal)}</strong><br>
-    Package: <strong>${fmt(pkgFixed)}</strong> (base + add-ons)<br>
-    Gap: <strong>${fmt(openBarTotal - pkgFixed)}</strong><br><br>
-    <strong>Breakeven:</strong><br>
-    At $${weightedAvgPrice.toFixed(2)}/drink (weighted avg), package = open bar at ~<strong>${Math.round(breakevenTotal)} drinks</strong>
-    (<strong>${breakevenPerPerson.toFixed(1)}/person</strong>, ${(breakevenPerPerson / hours).toFixed(1)}/hr).<br><br>
-    <strong>Worst case (all cocktails @ $${val('priceCocktail')}):</strong><br>
-    Overage: ${fmt(worstCaseOverageCost)} &rarr; Total: ${fmt(pkgFixed + worstCaseOverageCost)}<br><br>
-    <strong>Result:</strong> Package cheaper in <strong>${pctCheaper}%</strong> of ${iterations.toLocaleString()} sims.<br>
-    Median drinks: <strong>${Math.round(percentile(drinkTotals, 50))}</strong> (${(percentile(drinkTotals, 50)/n).toFixed(1)}/person).<br>
-    Median savings: <strong>${fmt(Math.abs(openBarTotal - median))}</strong> ${median < openBarTotal ? 'with package' : 'with open bar'}.
-  `;
-
-  document.getElementById('results').classList.remove('hidden');
-  document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('resultsContent').classList.remove('hidden');
 }
 
 // Init
-renderGuestTable();
-updateShapeDisplays();
+guests = load() || [];
+renderGuests();
+updateShapes();
 </script>
 </body>
 </html>
