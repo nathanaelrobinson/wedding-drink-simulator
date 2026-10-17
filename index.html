@@ -291,6 +291,30 @@ input.name-input:focus { outline: none; background: var(--bg); border-radius: 3p
           <div id="breakevenText" style="font-size:13px;line-height:1.9"></div>
         </div>
       </div>
+
+      <!-- Row 5: Stress Tests -->
+      <div class="card" style="margin-top:20px;border-left:3px solid var(--red)">
+        <h3 style="color:var(--red)">Stress Tests &mdash; What If Our Assumptions Are Wrong?</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+          Each scenario re-runs the simulation with one assumption changed to see which risks move the needle most.
+        </p>
+
+        <!-- Tornado chart -->
+        <div style="position:relative;height:320px;margin-bottom:20px"><canvas id="tornadoChart"></canvas></div>
+
+        <!-- Scenario cards -->
+        <div id="stressCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:16px"></div>
+
+        <!-- Tail decomposition -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <h3>Tail Decomposition &mdash; What Do The Worst 5% Look Like?</h3>
+          <div id="tailDecomp" style="font-size:13px;line-height:1.8;margin-top:10px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px">
+            <div style="position:relative;height:240px"><canvas id="tailCatChart"></canvas></div>
+            <div style="position:relative;height:240px"><canvas id="tailBevChart"></canvas></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -563,6 +587,9 @@ function runSimulation() {
     {label:'Open Bar',data:oLine,borderColor:'#e74c3c',borderWidth:2.5,borderDash:[8,5],fill:false,pointRadius:0},
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{filter:item=>['Pkg Median','Open Bar','P25-P75 range','P5-P95 range'].includes(item.text)}}},scales:{x:{title:{display:true,text:'Guest Count'}},y:{ticks:{callback:v=>'$'+v.toLocaleString()}}}}});
 
+  // ── STRESS TESTS ──
+  runStressTests(sg,hrs,n,ob,tots,res,med,p5,p95,p99,pctCh);
+
   // Breakeven
   const af=val('addOnCocktailQty')*val('addOnCocktailPrice')+val('addOnChampQty')*val('addOnChampPrice');
   const wAvg=mr.tot>0?(mr.b*val('priceBeer')+mr.w*val('priceWine')+mr.c*val('priceCocktail'))/mr.tot:(val('priceBeer')+val('priceWine')+val('priceCocktail'))/3;
@@ -580,6 +607,147 @@ function runSimulation() {
     Median &Delta;: <strong>${fmt(Math.abs(ob-med))}</strong> ${med<ob?'saved with pkg':'extra vs open bar'}`;
 
   document.getElementById('resultsContent').classList.remove('hidden');
+}
+
+// ── STRESS TEST ENGINE ──
+function runStressTests(sg,hrs,n,ob,baseTots,baseRes,baseMed,baseP5,baseP95,baseP99,basePctCh){
+  const iters=2000; // fewer iters for stress (speed)
+
+  // Helper: run sim with modified guests/profiles, return sorted totals
+  function stressSim(modGuests,overrideProfiles){
+    const origProfs={};
+    // Temporarily override profile inputs if needed
+    if(overrideProfiles){
+      for(const[cat,vals]of Object.entries(overrideProfiles)){
+        const pf='prof'+cat[0].toUpperCase()+cat.slice(1);
+        origProfs[pf+'Mean']=document.getElementById(pf+'Mean').value;
+        origProfs[pf+'Std']=document.getElementById(pf+'Std').value;
+        document.getElementById(pf+'Mean').value=vals.mean;
+        document.getElementById(pf+'Std').value=vals.std;
+      }
+    }
+    const r=[];
+    for(let i=0;i<iters;i++){const dr=simOnce(modGuests,hrs);r.push({...pkgCost(modGuests.length,dr),...dr});}
+    r.sort((a,b)=>a.total-b.total);
+    // Restore
+    if(overrideProfiles){for(const[k,v]of Object.entries(origProfs))document.getElementById(k).value=v;}
+    return r;
+  }
+
+  // Define stress scenarios
+  const scenarios=[];
+
+  // 1. Consumption +30%
+  const boost30={};
+  ['light','moderate','heavy','whale'].forEach(c=>{const p=getProf(c);boost30[c]={mean:(p.mean*1.3).toFixed(2),std:p.std};});
+  const r1=stressSim(sg,boost30);
+  scenarios.push({name:'Everyone drinks 30% more',desc:'All consumption rates +30%',icon:'📈',
+    p95:pctl(r1.map(r=>r.total),95),med:pctl(r1.map(r=>r.total),50),pctCh:Math.round(r1.filter(r=>r.total<ob).length/r1.length*100)});
+
+  // 2. 5 moderates → heavy
+  const sg2=sg.map(g=>({...g}));
+  let flipped=0;for(let i=0;i<sg2.length&&flipped<5;i++){if(sg2[i].category==='moderate'){sg2[i].category='heavy';flipped++;}}
+  const r2=stressSim(sg2);
+  scenarios.push({name:'5 moderates are actually heavy',desc:'Misclassified 5 guests upward',icon:'🔄',
+    p95:pctl(r2.map(r=>r.total),95),med:pctl(r2.map(r=>r.total),50),pctCh:Math.round(r2.filter(r=>r.total<ob).length/r2.length*100)});
+
+  // 3. Double the whales
+  const sg3=sg.map(g=>({...g}));
+  const curWhales=sg3.filter(g=>g.category==='whale').length;
+  let promoted=0;for(let i=0;i<sg3.length&&promoted<Math.max(curWhales,3);i++){if(sg3[i].category==='heavy'){sg3[i].category='whale';promoted++;}}
+  const r3=stressSim(sg3);
+  scenarios.push({name:`${promoted} more whales (${curWhales}→${curWhales+promoted})`,desc:'Heavy drinkers promoted to whale',icon:'🐋',
+    p95:pctl(r3.map(r=>r.total),95),med:pctl(r3.map(r=>r.total),50),pctCh:Math.round(r3.filter(r=>r.total<ob).length/r3.length*100)});
+
+  // 4. Beverage mix: all cocktails
+  const sg4=sg.map(g=>({...g,beverage:'cocktail'}));
+  const r4=stressSim(sg4);
+  scenarios.push({name:'Everyone orders cocktails',desc:'Worst-case beverage cost mix',icon:'🍸',
+    p95:pctl(r4.map(r=>r.total),95),med:pctl(r4.map(r=>r.total),50),pctCh:Math.round(r4.filter(r=>r.total<ob).length/r4.length*100)});
+
+  // 5. Consumption +30% AND 3 more whales
+  const sg5=sg.map(g=>({...g}));
+  let p5c=0;for(let i=0;i<sg5.length&&p5c<3;i++){if(sg5[i].category==='heavy'){sg5[i].category='whale';p5c++;}}
+  const r5=stressSim(sg5,boost30);
+  scenarios.push({name:'Combined: +30% consumption & +3 whales',desc:'Multiple assumptions wrong at once',icon:'💥',
+    p95:pctl(r5.map(r=>r.total),95),med:pctl(r5.map(r=>r.total),50),pctCh:Math.round(r5.filter(r=>r.total<ob).length/r5.length*100)});
+
+  // 6. 10 fewer non-drinkers (reclassified as moderate)
+  const sg6=sg.map(g=>({...g}));
+  let reclass=0;for(let i=0;i<sg6.length&&reclass<10;i++){if(sg6[i].category==='non'){sg6[i].category='moderate';reclass++;}}
+  const r6=stressSim(sg6);
+  if(reclass>0) scenarios.push({name:`${reclass} non-drinkers actually drink`,desc:'Non-drinkers reclassified to moderate',icon:'🍷',
+    p95:pctl(r6.map(r=>r.total),95),med:pctl(r6.map(r=>r.total),50),pctCh:Math.round(r6.filter(r=>r.total<ob).length/r6.length*100)});
+
+  // ── TORNADO CHART ──
+  dc('tornado');
+  const baseP95=pctl(baseTots,95);
+  const tData=scenarios.map(s=>({name:s.name,delta:s.p95-baseP95})).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
+  charts.tornado=new Chart(document.getElementById('tornadoChart'),{type:'bar',data:{
+    labels:tData.map(d=>d.name),
+    datasets:[{data:tData.map(d=>d.delta),backgroundColor:tData.map(d=>d.delta>0?'rgba(181,71,58,0.6)':'rgba(74,124,79,0.6)'),borderColor:tData.map(d=>d.delta>0?'rgba(181,71,58,0.9)':'rgba(74,124,79,0.9)'),borderWidth:1}]
+  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const v=ctx.raw;return (v>=0?'+':'')+fmt(v)+' to P95 cost'}}}},
+    scales:{x:{title:{display:true,text:'Change in P95 Cost vs Baseline'},ticks:{callback:v=>(v>=0?'+':'')+fmt(v)},grid:{color:'rgba(0,0,0,0.06)'}},y:{ticks:{font:{size:11}}}}}
+  });
+
+  // ── SCENARIO CARDS ──
+  const cardsEl=document.getElementById('stressCards');
+  cardsEl.innerHTML=scenarios.map(s=>{
+    const delta95=s.p95-baseP95;
+    const deltaMed=s.med-pctl(baseTots,50);
+    return `<div style="background:var(--bg);border-radius:8px;padding:14px;border-left:3px solid ${delta95>500?'var(--red)':delta95>0?'var(--gold)':'var(--green)'}">
+      <div style="font-size:14px;font-weight:700;margin-bottom:2px">${s.icon} ${s.name}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${s.desc}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px">
+        <div><span style="color:var(--muted)">P95</span><br><strong>${fmt(s.p95)}</strong><br><span style="font-size:10px;color:${delta95>0?'var(--red)':'var(--green)'}">${delta95>=0?'+':''}${fmt(delta95)}</span></div>
+        <div><span style="color:var(--muted)">Median</span><br><strong>${fmt(s.med)}</strong><br><span style="font-size:10px;color:${deltaMed>0?'var(--red)':'var(--green)'}">${deltaMed>=0?'+':''}${fmt(deltaMed)}</span></div>
+        <div><span style="color:var(--muted)">Pkg wins</span><br><strong>${s.pctCh}%</strong><br><span style="font-size:10px;color:${s.pctCh<basePctCh?'var(--red)':'var(--green)'}">${s.pctCh-basePctCh>=0?'+':''}${s.pctCh-basePctCh}pp</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── TAIL DECOMPOSITION ──
+  const tail5pct=Math.max(1,Math.floor(baseRes.length*0.05));
+  const tailSlice=baseRes.slice(baseRes.length-tail5pct);
+  const tailAvgDrinks=tailSlice.reduce((a,r)=>a+r.tot,0)/tailSlice.length;
+  const tailAvgCost=tailSlice.reduce((a,r)=>a+r.total,0)/tailSlice.length;
+  const tailAvgOver=tailSlice.reduce((a,r)=>a+r.over,0)/tailSlice.length;
+  const tailAvgB=tailSlice.reduce((a,r)=>a+r.b,0)/tailSlice.length;
+  const tailAvgW=tailSlice.reduce((a,r)=>a+r.w,0)/tailSlice.length;
+  const tailAvgC=tailSlice.reduce((a,r)=>a+r.c,0)/tailSlice.length;
+  const tailCostB=tailSlice.reduce((a,r)=>a+r.oB*val('priceBeer'),0)/tailSlice.length;
+  const tailCostW=tailSlice.reduce((a,r)=>a+r.oW*val('priceWine'),0)/tailSlice.length;
+  const tailCostC=tailSlice.reduce((a,r)=>a+r.oC*val('priceCocktail'),0)/tailSlice.length;
+
+  document.getElementById('tailDecomp').innerHTML=`
+    In the <strong>worst 5%</strong> of simulations (${tail5pct.toLocaleString()} runs):<br>
+    <span style="color:var(--muted)">Avg total drinks:</span> <strong class="mono">${Math.round(tailAvgDrinks)}</strong>
+    (<strong>${(tailAvgDrinks/n).toFixed(1)}</strong>/person &middot; <strong>${(tailAvgDrinks/n/hrs).toFixed(1)}</strong>/hr)<br>
+    <span style="color:var(--muted)">Avg overage drinks:</span> <strong class="mono">${Math.round(tailAvgOver)}</strong>
+    (${Math.round(tailAvgOver/n*10)/10}/person beyond the pool)<br>
+    <span style="color:var(--muted)">Avg tail cost:</span> <strong>${fmt(tailAvgCost)}</strong>
+    &mdash; <span style="color:var(--red)">${fmt(tailAvgCost-ob)} over open bar</span><br>
+    <span style="color:var(--muted)">Overage cost split:</span>
+    Beer ${fmt(tailCostB)} &middot; Wine ${fmt(tailCostW)} &middot; Cocktail ${fmt(tailCostC)}
+  `;
+
+  // Tail charts
+  dc('tailCat');dc('tailBev');
+  // What the drink volumes look like in the tail
+  charts.tailCat=new Chart(document.getElementById('tailCatChart'),{type:'bar',data:{
+    labels:['Baseline Median','Worst 5% Avg'],
+    datasets:[
+      {label:'Beer',data:[baseRes[Math.floor(baseRes.length/2)].b,Math.round(tailAvgB)],backgroundColor:'rgba(218,165,32,0.7)'},
+      {label:'Wine',data:[baseRes[Math.floor(baseRes.length/2)].w,Math.round(tailAvgW)],backgroundColor:'rgba(139,34,82,0.7)'},
+      {label:'Cocktail',data:[baseRes[Math.floor(baseRes.length/2)].c,Math.round(tailAvgC)],backgroundColor:'rgba(47,107,122,0.7)'}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:'Drink Volume: Median vs Tail'}},scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'Drinks'}}}}
+  });
+
+  // Overage cost breakdown in tail
+  charts.tailBev=new Chart(document.getElementById('tailBevChart'),{type:'doughnut',data:{
+    labels:[`Beer ${fmt(tailCostB)}`,`Wine ${fmt(tailCostW)}`,`Cocktail ${fmt(tailCostC)}`],
+    datasets:[{data:[tailCostB,tailCostW,tailCostC],backgroundColor:['rgba(218,165,32,0.8)','rgba(139,34,82,0.8)','rgba(47,107,122,0.8)'],borderWidth:2,borderColor:'#fff'}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},title:{display:true,text:'Tail Overage Cost by Type'}}}});
 }
 
 // Init
